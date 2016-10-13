@@ -90,7 +90,7 @@ class Package2Pod:
             Wrappers.full_field_map = json_fields
 
             for key, field_map in json_fields.iteritems():
-                # log.debug('%s => %s', key, field_map)
+                #log.debug('%s => %s', key, field_map)
 
                 field_type = field_map.get('type', 'direct')
                 is_extra = field_map.get('extra')
@@ -138,7 +138,7 @@ class Package2Pod:
                         if array_key:
                             dataset[key] = [Package2Pod.filter(t[array_key]) for t in package.get(field, {})]
                 if wrapper:
-                    # log.debug('wrapper: %s', wrapper)
+                    # log.debug('wrapper: %s => %s', wrapper, field_map)
                     method = getattr(Wrappers, wrapper)
                     if method:
                         Wrappers.current_field_map = field_map
@@ -490,12 +490,14 @@ class Wrappers:
     def mime_type_it(value):
         if not value:
             return value
-        formats = h.resource_formats()
+
+        formats      = h.resource_formats()
         format_clean = value.lower()
-        if format_clean in formats:
+
+        if format_clean in formats and formats[format_clean][0]:
             mime_type = formats[format_clean][0]
         else:
             mime_type = value
-        msg = value + ' ... BECOMES ... ' + mime_type
-        log.debug(msg)
+
+        log.debug('%s ... BECOMES ... %s', value, mime_type)
         return mime_type
