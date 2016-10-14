@@ -5,7 +5,7 @@ except ImportError:
 
 from logging import getLogger
 
-from helpers import *
+from ckanext.datajson.helpers import *
 
 log = getLogger(__name__)
 
@@ -216,6 +216,15 @@ class Wrappers:
     full_field_map = None
     bureau_code_list = None
     resource_formats = None
+
+    @staticmethod
+    def ckan_url_for_dataset_id(id):
+        """Returns canonical URL to the provided dataset
+        """
+        import pylons.config as config
+        url = config.get('ckan.site_url') + '/dataset/' + id
+        return url
+
 
     @staticmethod
     def catalog_publisher(value):
