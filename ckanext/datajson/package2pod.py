@@ -220,10 +220,24 @@ class Wrappers:
     @staticmethod
     def ckan_url_for_dataset_id(id):
         """Returns canonical URL to the provided dataset
+
+        id -- The UUID for a CKAN dataset
+
+        Returns a URL string
         """
         import pylons.config as config
         url = config.get('ckan.site_url') + '/dataset/' + id
         return url
+
+    @staticmethod
+    def ckan_tags_to_keywords(tags):
+        """Converts core CKAN tags to a Keywords array
+
+        tags -- The tags dictionary from the CKAN package
+
+        Returns a list of keyword strings
+        """
+        return list(t['display_name'] for t in tags)
 
 
     @staticmethod
