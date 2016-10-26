@@ -86,9 +86,17 @@ email_validator = lepl.apps.rfc3696.Email()
 # load the OMB bureau codes on first load of this module
 import urllib
 import csv
+import os
 
 omb_burueau_codes = set()
-for row in csv.DictReader(urllib.urlopen("https://project-open-data.cio.gov/data/omb_bureau_codes.csv")):
+if 'CKAN_BUREAU_CSV_FILE' in os.environ:
+  with open(os.environ['CKAN_BUREAU_CSV_FILE']) as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+      omb_burueau_codes.add(row["Agency Code"] + ":" + row["Bureau Code"])
+else:
+  url = os.environ.get('CKAN_BUREAU_CSV_URL', 'https://project-open-data.cio.gov/data/omb_bureau_codes.csv')
+  for row in csv.DictReader(urllib.urlopen(url)):
     omb_burueau_codes.add(row["Agency Code"] + ":" + row["Bureau Code"])
 
 

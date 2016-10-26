@@ -54,7 +54,28 @@ Then restart your server and check out:
 	http://yourdomain.com/data.jsonld
 	   and
 	http://yourdomain.com/pod/validate	
-	
+
+Providing OMB Bureau Codes
+--------------------------
+
+The ```datajsonvalidator.py``` file needs a list of OMB agency 
+and bureau codes. With no configuration, this information is
+automatically pulled from the Project Open Data web site. However,
+you can provide a local file with the same information using the
+```CKAN_BUREAU_CSV_FILE``` environment variable. Alternatively,
+you can use the ```CKAN_BUREAU_CSV_URL``` environment variable to
+specify a different URL to fetch the information.
+
+By default, the URL is https://project-open-data.cio.gov/data/omb_bureau_codes.csv.
+
+An example csv file is provided named ```test_omb_bureau_codes.csv```. This
+file can be used by running the following command before starting
+this extension
+
+```
+export CKAN_BUREAU_CSV_FILE=test_omb_bureau_codes.csv
+```
+
 Caching The Response
 --------------------
 
