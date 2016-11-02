@@ -104,14 +104,14 @@ else:
 def do_validation(doc, errors_array, seen_identifiers):
     errs = {}
 
-    if type(doc) != list:
+    if type(doc) != dict:
         add_error(errs, 0, "Bad JSON Structure",
-                  "The file must be an array at its top level. "
-                  "That means the file starts with an open bracket [ and ends with a close bracket ].")
+                  "The file must be a dict at its top level. "
+                  "That means the file starts with an open brace { and ends with a close brace }.")
     elif len(doc) == 0:
         add_error(errs, 0, "Catalog Is Empty", "There are no entries in your file.")
     else:
-        for i, item in enumerate(doc):
+        for i, item in enumerate(doc['dataset']):
             # Required
 
             dataset_name = "dataset %d" % (i + 1)
