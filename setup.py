@@ -26,7 +26,7 @@ setup(
         """
         [ckan.plugins]
         datajson=ckanext.datajson.plugin:DataJsonPlugin
-        datajson_harvest=ckanext.datajson.plugin:DataJsonHarvester
+        datajson_harvest=ckanext.datajson.harvester_datajson:DataJsonHarvester
         cmsdatanav_harvest=ckanext.datajson.plugin:CmsDataNavigatorHarvester
         """,
 )
