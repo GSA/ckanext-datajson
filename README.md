@@ -1,172 +1,101 @@
-ckanext-datajson
-================
+# ckanext-datajsonAR
 
-[![Build Status](https://travis-ci.org/GSA/ckanext-datajson.svg?branch=master)](https://travis-ci.org/GSA/ckanext-datajson)
-[![Codacy Badge](https://api.codacy.com/project/badge/c4816041270448b6a0c9760933065b7e)](https://www.codacy.com/app/alexandr-perfilov/ckanext-datajson)
-[![Coverage Status](https://coveralls.io/repos/GSA/ckanext-datajson/badge.svg?branch=master&service=github)](https://coveralls.io/github/GSA/ckanext-datajson?branch=master)
+La extensión de CKAN `datajsonAR`, fue confeccionada dentro del marco del plan de `Datos Abiertos` de la República Argentina e incluida dentro del proyecto [portal andino](https://github.com/datosgobar/portal-andino), en función de que el mismo pueda asi cumplir con estándares de calidad para la confección de metadata para catálogos de datos [DCAT](https://www.w3.org/TR/vocab-dcat) propuestos por la World Wide Web Consortium([W3C](www.w3c.es)). 
+Este desarrollo es un fork del trabajo realizado por la [GSA](https://github.com/GSA), con la extensión para CKAN, [GSA/ckanext-datajson](https://github.com/GSA/ckanext-datajson)
 
-A CKAN extension containinig plugins ``datajson``.
-First is used by http://catalog.data.gov/ to harvest data sources 
-from a remote /data.json file according to the U.S. Project
-Open Data metadata specification (https://project-open-data.cio.gov/).
+Indice:
+------
++ [Presentacion](#ckanext-datajsonar)
++ [Instalación](#instalación-de-la-extensión)
+    + [Pre requisitos](#pre-requisitos)
+    + [Proceso de instalación de la extensión datajsonAR](#proceso-de-instalación-de-la-extensión-datajsonar)
+    + [Probado que todo funciona](#probado-que-todo-funciona)
++ [Usage](#usage)
++ [Tests](#tests)
++ [Credits / Copying](#credits--copying)
++ [Contacto](#contacto)
++ [Comentarios / preguntas](#comentarios-o-preguntas)
 
-Plugin ``datajson`` provides a harvester to import datasets from other
-remote /data.json files. See below for setup instructions.
 
-And the plugin also provides a new view to validate /data.json files
-at http://ckanhostname/pod/validate.
 
-Installation
-------------
+Instalación de la Extensión:
+---
 
-To install, activate your CKAN virtualenv, install dependencies, and
-install the module in develop mode, which just puts the directory in your
-Python path.
+###### Pre requisitos:
++ Python 2.7.x 
++ CKAN 2.5.2
++ ckanext [gobAR-Theme](https://github.com/gobabiertoAR/portal-andino-theme)
++ ckanext [Hierarchy](https://github.com/datagovuk/ckanext-hierarchy)
++ ckanext [Harvest](https://github.com/ckan/ckanext-harvestt)
 
-	. path/to/pyenv/bin/activate
-	pip install -r pip-requirements.txt
-	python setup.py develop
+##### Proceso de instalación de la extensión datajsonAR
+```bash
+# Dentro del virtualenv de CKAN
+# . ruta/al/ckan_pyenv/bin/activate
+(ckan_pyenv) $ pip install pyyaml lepl jsonschema rfc3987
+(ckan_pyenv) $ pip install -e "git+https://github.com/datosgobar/ckanext-datajson.git#egg=ckanext-datajson"
+```
+Dentro del apartado `[app:main]` de la configuracion de CKAN `(/etc/ckan/default/ckan_config.ini)` agregar los siguientes campos:
+```bash
+[app:main]
+ckan.owner = entidad-responsable-del-portal # Admite espacios en blanco entre palabras
+ckan.owner.email = mail@entidad-responsable-del-portal.xxx # si este campo no se define, esta info se tomara del area de "contacto" de GobAr-Theme
+```
+Luego, dentro de su archivo de configuracion de CKAN, normalmente alojado en `/etc/ckan/default/config_name.ini`, agregar la siguiente linea en la sección de `[plugins]` a `ckan.plugins`
 
-Then in your CKAN .ini file, add ``datajson``
-to your ckan.plugins line:
+	ckan.plugins = (otros plugins) datajson
 
-	ckan.plugins = (other plugins here...) datajson
-
-That's the plugin for /data.json output. To make the harvester available,
-also add:
-
-	ckan.plugins = (other plugins here...) harvest datajson_harvest
-
-If you're running CKAN via WSGI, we found a strange Python dependency
-bug. It might only affect development environments. The fix was to
-revise wsgi.py and add:
-
-	import ckanext
-
-before
-
-	from paste.deploy import loadapp
-
-Then restart your server and check out:
-
-	http://yourdomain.com/data.json
-	   and
-	http://yourdomain.com/data.jsonld
-	   and
-	http://yourdomain.com/pod/validate	
+Probado que todo funciona:
+---
+Para saber que el proceso de instalación se realizo con exito, solo debemos tipear, en un navegador:
 	
-Caching The Response
---------------------
+	http://{tu_host}/data.json
 
-If you're deploying inside Apache, some caching would be a good idea
-because generating the /data.json file can take a good few moments.
-Enable the cache modules:
+Y deberíamos ver una respuesta similar a esta:
+```JSON
+{
+    "title": "Título del portal",
+    "description": "Descripcion del portal",
+    "superThemeTaxonomy": "http://datos.gob.ar/superThemeTaxonomy.json",
+    "publisher": {
+        "mbox": "email@deContacto.xxx",
+        "name": "Nombre de la persona o institución responsable de la instancia CKAN."
+},
+	"themeTaxonomy": [],
+	"dataset": []
+}
+```
 
-	a2enmod cache
-	a2enmod disk_cache
 
-And then in your Apache configuration add:
-
-	CacheEnable disk /data.json
-	CacheRoot /tmp/apache_cache
-	CacheDefaultExpire 120
-	CacheMaxFileSize 50000000
-	CacheIgnoreCacheControl On
-	CacheIgnoreNoLastMod On
-	CacheStoreNoStore On
-
-And be sure to create /tmp/apache_cache and make it writable by the Apache process.
-
-Generating /data.json Off-Line
-------------------------------
-
-Generating this file is a little slow, so an alternative instead of caching is
-to generate the file periodically (e.g. in a cron job). In that case, you'll want
-to change the path that CKAN generates the file at to something *other* than /data.json.
-In your CKAN .ini file, in the app:main section, add:
-
-	ckanext.datajson.path = /internal/data.json
-
-Now create a crontab file ("mycrontab") to download this URL to a file on disk
-every ten minutes:
-
-	0-59/10 * * * * wget -qO /path/to/static/data.json http://localhost/internal/data.json
-
-And activate your crontab like so:
-
-	crontab mycrontab
-
-In Apache, we'll want to block outside access to the "internal" URL, and also
-map the URL /data.json to the static file. In your httpd.conf, add:
-
-	Alias /data.json /path/to/static/data.json
-	
-	<Location /internal/>
-		Order deny,allow
-		Allow from 127.0.0.1
-		Deny from all
-	</Location>
-
-And then restart Apache. Wait for the cron job to run once, then check if
-/data.json loads (and it should be fast!). Also double check that 
-http://yourdomain.com/internal/data.json gives a 403 forbidden error when
-accessed from some other location.
-
-Options
--------
-
-You can customize the URL that generates the data.json output:
+Usage:
+---
+Configurar la url de salida para nuestro `/data.json`, debebos agregar las sigientes lineas dentro del archivo de configuracion 
+de CKAN`[/etc/ckan/default/ckan-config.ini]`
 
 	ckanext.datajson.path = /data.json
-	ckanext.datajsonld.path = /data.jsonld
-	ckanext.datajsonld.id = http://www.youragency.gov/data.json
+	ckanext.datajsonld.id = http://www.tuagencia.gob.ar/data.json
 
-You can enable or disable the Data.json output by setting
+Para habilitar o deshabilitar por configuracion la visibilidad del `/data.json`, sin tener que quitar el plugin, agregaremos dentro del archivo de configuracion de CKAN`[/etc/ckan/default/ckan-config.ini]` la siguiente sentencia:
+	
+	# False, no se mostrara http://{tu-host}/data.json
+	# True, se muestra http://{tu-host}/data.json
+    ckanext.datajson.url_enabled = False 
 
-    ckanext.datajson.url_enabled = False
 
-If ckanext.datajsonld.path is omitted, it defaults to replacing ".json" in your
-ckanext.datajson.path path with ".jsonld", so it probably won't need to be
-specified.
 
-The option ckanext.datajsonld.id is the @id value used to identify the data
-catalog itself. If not given, it defaults to ckan.site_url.
+Tests:
+---
+*WIP*
 
-The Harvester
--------------
 
-To use the data.json harvester, you'll also need to set up the CKAN harvester
-extension. See the CKAN harvester README at https://github.com/okfn/ckanext-harvest
-for how to do that. You'll set some configuration variables and then initialize the
-CKAN harvester plugin using:
+Credits / Copying
+---
+El presente desarrollo es un fork del trabajo de la [GSA](link), [GSA/ckanext-datajson](https://github.com/GSA/ckanext-datajson) y podes visitarlo [Aquí](https://github.com/GSA/ckanext-datajson/blob/master/README.md) (EN).
 
-	paster --plugin=ckanext-harvest harvester initdb --config=/path/to/ckan.ini
+Contacto:
+---
+Este proyecto es en desarrollo, si viste algun `bug`, por favor, [creanos un issue](https://github.com/datosgobar/ckanext-datajsonAR/issues/new?title=Encontre un bug!).
 
-Now you can set up a new DataJson harvester by visiting:
-
-	http://yourdomain.com/harvest
-
-And when configuring the data source, just choose "/data.json" as the source type.
-
-**The next paragraph assumes you're using my fork of the CKAN harvest extension
-at https://github.com/JoshData/ckanext-harvest**
-
-In the configuration field, you can put a YAML string containing defaults for fields
-that may not be set in the source data.json files, e.g. enter something like this:
-
-	defaults:
-	  Agency: Department of Health & Human Services
-	  Author: Substance Abuse & Mental Health Services Administration
-	  author_id: http://healthdata.gov/id/agency/samhsa
-
-This again is tied to the HealthData.gov metadata schema.
-
-Credit / Copying
-----------------
-
-Original work written by the HealthData.gov team. It has been modified in support of Data.gov.
-
-As a work of the United States Government, this package is in the public 
-domain within the United States. Additionally, we waive copyright and 
-related rights in the work worldwide through the CC0 1.0 Universal 
-public domain dedication (which can be found at http://creativecommons.org/publicdomain/zero/1.0/).
+Comentarios o preguntas?
+---
+Escribinos a [datos@modernizacion.gob.ar](mailto:datos@modernizacion.gob.ar)

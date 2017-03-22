@@ -5,17 +5,20 @@
   "description": "The metadata format for all federal open data. Validates a single JSON object entry (as opposed to entire Data.json catalog).",
   "type": "object",
   "required": [
-    "bureaucode",
-    "programcode",
-    "title",
+    "author",
+    "author_email",
     "description",
-    "keyword",
-    "modified",
-    "publisher",
-    "contactpoint",
-    "mbox",
+    "distribution",
     "identifier",
-    "accesslevel"
+    "issued",
+    "keyword",
+    "language",
+    "license",
+    "maintainer",
+    "maintainer_email",
+    "modified",
+    "supertheme",
+    "title"
   ],
   "properties": {
     "accesslevel": {
@@ -55,29 +58,35 @@
       ]
     },
     "accrualperiodicity": {
-      "title": "Frequency",
+      "title": "updateFrequency",
       "description": "Frequency with which dataset is published.",
       "anyOf": [
         {
           "enum": [
-            "Annual",
-            "Bimonthly",
-            "Semiweekly",
-            "Daily",
-            "Biweekly",
-            "Semiannual",
-            "Biennial",
-            "Triennial",
-            "Three times a week",
-            "Three times a month",
-            "Continuously updated",
-            "Monthly",
-            "Quarterly",
-            "Semimonthly",
-            "Three times a year",
-            "Weekly",
-            "Hourly",
-            "Completely irregular"
+              "R/P10Y",
+              "R/P4Y",
+              "R/P1Y",
+              "R/P2M",
+              "R/P3.5D",
+              "R/P1D",
+              "R/P2W",
+              "R/P6M",
+              "R/P2Y",
+              "R/P3Y",
+              "R/P0.33W",
+              "R/P0.33M",
+              "R/PT1S",
+              "R/P1M",
+              "R/P3M",
+              "R/P0.5M",
+              "R/P4M",
+              "R/P1W",
+              "R/PT1H",
+              "R/PT1S",
+              "R/P0.5M",
+              "R/P1Y",
+              "eventual",
+              "R/P0.5Y"
           ]
         },
         {
@@ -99,7 +108,11 @@
     "contactpoint": {
       "title": "Contact Name",
       "description": "Contact person’s name for the asset.",
-      "type": "string"
+      "items": {
+          "hasEmail": "string",
+          "@type": "string",
+          "fn": "string"
+      }
     },
     "datadictionary": {
       "title": "Data Dictionary",
@@ -134,37 +147,17 @@
     "distribution": {
       "title": "Distribution",
       "description": "Holds multiple download URLs for datasets composed of multiple files and/or file types",
-      "anyOf": [
-        {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "accessurl",
-              "format"
-            ],
-            "properties": {
-              "accessurl": {
-                "title": "Download URL",
-                "description": "URL providing direct access to the downloadable distribution of a dataset.",
-                "type": "string",
-                "format": "uri"
-              },
-              "format": {
-                "title": "Format",
-                "description": "The file format or API type of the distribution.",
-                "pattern": "^[-\\w]+/[-\\w]+(\\.[-\\w]+)*([+][-\\w]+)?$",
-                "type": "string"
-              }
-            }
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        {
-          "type": "null"
-        }
-      ]
+      "type": "array",
+      "items": {
+          "@type": "string",
+          "format": "string",
+          "title": "string",
+          "description": "string",
+          "issued": "string",
+          "modified": "string",
+          "accessURL": "string",
+          "downloadURL": "string"
+      }
     },
     "format": {
       "title": "Format",
@@ -253,6 +246,9 @@
           }
         },
         {
+          "type": "string"
+        },
+        {
           "type": "null"
         }
       ]
@@ -333,7 +329,10 @@
     "publisher": {
       "title": "Publisher",
       "description": "The publishing entity.",
-      "type": "string"
+      "items":{
+        "mbox": "string",
+        "name": "string"
+      }
     },
     "references": {
       "title": "Related Documents",
@@ -412,23 +411,14 @@
         }
       ]
     },
-    "theme": {
-      "title": "Category",
-      "description": "Main thematic category of the dataset.",
-      "anyOf": [
-        {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "minItems": 1,
-          "uniqueItems": true
-        },
-        {
-          "type": "null"
-        }
-      ]
+    "theme": {"title": "Themes",
+      "description": "Write here some useful.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
     },
     "title": {
       "title": "Title",

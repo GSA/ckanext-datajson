@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 try:
     from collections import OrderedDict  # 2.7
 except ImportError:
@@ -18,7 +21,73 @@ class Package2Pod:
 
     @staticmethod
     def wrap_json_catalog(dataset_dict, json_export_map):
-        catalog_headers = [(x, y) for x, y in json_export_map.get('catalog_headers').iteritems()]
+        andino_platform = True
+        import ckanext.gobar_theme.helpers as gobar_helpers
+        try:
+            site_title = gobar_helpers.get_theme_config("title.site-title", "")
+            mbox = gobar_helpers.get_theme_config("social.mail", "")
+            site_description = gobar_helpers.get_theme_config("title.site-description", "")
+        except AttributeError:
+            # Esto significa que no estoy corriendo dentro de Andino.
+            andino_platform = False
+            site_title = ""
+            mbox = ""
+            site_description = ""
+        superThemeTaxonomy = "http://datos.gob.ar/superThemeTaxonomy.json"
+        import ckan.logic as logic
+        from ckan.common import c
+        import ckan.model as model
+        context = {
+            'model': model,
+            'session': model.Session,
+            'user': c.user or c.author
+        }
+        data_dict_page_results = {
+            'all_fields': True,
+            'type': 'group',
+            'limit': None,
+            'offset': 0,
+        }
+        my_themes = []
+        from os import path, environ
+        from ConfigParser import ConfigParser
+        ckan_owner = ''
+        if 'CKAN_CONFIG' in environ:
+            if path.exists(environ['CKAN_CONFIG']):
+                tmp_ckan_config = ConfigParser()
+                tmp_ckan_config.read(environ['CKAN_CONFIG'])
+                try:
+                    ckan_owner = tmp_ckan_config.get('app:main', 'ckan.owner')
+                except Exception:
+                    pass
+                try:
+                    tmp_mbox = tmp_ckan_config.get('app:main', 'ckan.owner.email')
+                    if len(tmp_mbox) > 0:
+                        mbox = tmp_mbox
+                except Exception:
+                    pass
+                if not andino_platform:
+                    try:
+                        site_title = tmp_ckan_config.get('app:main', 'ckan.site.title')
+                    except Exception:
+                        site_title = "No definido en \"config.ini\""
+                    try:
+                        site_description = tmp_ckan_config.get('app:main', 'ckan.site.description')
+                    except Exception:
+                        site_description = "No definido en \"config.ini\""
+
+        for theme in logic.get_action('group_list')(context, data_dict_page_results):
+            my_themes.append({'id': theme['name'],
+                              'description': theme['description'],
+                              'label': theme['display_name']
+                              })
+        catalog_headers = [("title", site_title),
+                           ("description", site_description),
+                           ("superThemeTaxonomy", superThemeTaxonomy),
+                           ("publisher", {"name": ckan_owner,
+                                          "mbox": mbox}),
+                           ("themeTaxonomy", my_themes)]
+        # catalog_headers = [(x, y) for x, y in json_export_map.get('catalog_headers').iteritems()]
         catalog = OrderedDict(
             catalog_headers + [('dataset', dataset_dict)]
         )
@@ -85,7 +154,7 @@ class Package2Pod:
 
         try:
             dataset = OrderedDict([("@type", "dcat:Dataset")])
-
+            #del dataset['@type']
             Wrappers.pkg = package
             Wrappers.full_field_map = json_fields
 
@@ -147,6 +216,12 @@ class Package2Pod:
             # CKAN doesn't like empty values on harvest, let's get rid of them
             # Remove entries where value is None, "", or empty list []
             dataset = OrderedDict([(x, y) for x, y in dataset.iteritems() if y is not None and y != "" and y != []])
+            try:
+                del dataset['@type']
+                for dist in dataset['distribution']:
+                    del dist['@type']
+            except KeyError:
+                log.info("Contenido de distribution: %s", unicode(dist))
 
             return dataset
         except Exception as e:
@@ -363,6 +438,7 @@ class Wrappers:
                 email = Package2Pod.filter(email)
 
             contact_point = OrderedDict([('@type', 'vcard:Contact')])
+            # Modify here!
             if fn:
                 contact_point['fn'] = fn
             if email:
@@ -430,12 +506,12 @@ class Wrappers:
                 res_url = res_url.replace('http://[[REDACTED', '[[REDACTED')
                 res_url = res_url.replace('http://http', 'http')
                 if r.get('resource_type') in ['api', 'accessurl']:
-                    resource['accessURL'] = res_url
+                    pass  # resource['accessURL'] = res_url
                     if 'mediaType' in resource:
                         resource.pop('mediaType')
                 else:
-                    if 'accessURL' in resource:
-                        resource.pop('accessURL')
+                    # if 'accessURL' in resource:
+                    #    resource.pop('accessURL')
                     resource['downloadURL'] = res_url
                     if 'mediaType' not in resource:
                         log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))

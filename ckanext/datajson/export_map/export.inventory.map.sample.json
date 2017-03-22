@@ -105,9 +105,6 @@
     "distribution": {
       "wrapper": "generate_distribution",
       "map": {
-        "accessURL": {
-          "field": "url"
-        },
         "mediaType": {
           "field": "format",
           "wrapper": "mime_type_it"

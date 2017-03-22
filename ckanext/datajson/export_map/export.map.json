@@ -1,0 +1,145 @@
+  {
+    "validation_enabled": false,
+    "catalog_headers": {
+      "superThemeTaxonomy": "http://datos.gob.ar/superThemeTaxonomy.json"
+    },
+    "dataset_fields_map": {
+      "title": {
+        "field": "title"
+      },
+      "description": {
+        "field": "notes"
+      },
+      "modified": {
+        "field": "metadata_modified"
+      },
+      "identifier": {
+        "field": "id"
+      },
+      "dataQuality": {
+        "extra": true,
+        "field": "Data Quality"
+      },
+      "conformsTo": {
+        "extra": true,
+        "field": "Conforms To"
+      },
+      "describedBy": {
+        "extra": true,
+        "field": "Described by"
+      },
+      "describedByType": {
+        "extra": true,
+        "field": "Described by Type"
+      },
+      "issued": {
+        "field": "metadata_created"
+      },
+      "landingPage": {
+        "field": "url"
+      },
+      "license": {
+        "field": "license_title"
+      },
+      "primaryITInvestmentUII": {
+        "extra": true,
+        "field": "Primary It Investment Uii"
+      },
+      "rights": {
+        "extra": true,
+        "field": "rights"
+      },
+      "systemOfRecords": {
+        "extra": true,
+        "field": "System Of Records"
+      },
+      "spatial": {
+        "extra": true,
+        "field": "Spatial"
+      },
+      "publisher": {
+        "field": "author"
+      },
+
+
+      "distribution": {
+        "wrapper": "generate_distribution",
+        "map": {
+          "mediaType": {
+            "field": "mimetype"
+          },
+          "format": {
+            "field": "format"
+          },
+          "title": {
+            "field": "name"
+          },
+          "description": {
+            "field": "description"
+          },
+          "conformsTo": {
+            "field": "conformsTo"
+          },
+          "describedBy": {
+            "field": "describedBy"
+          },
+          "describedByType": {
+            "field": "describedByType"
+          },
+          "byteSize": {
+            "field": "size"
+          },
+          "issued": {
+            "field": "created"
+          },
+          "modified": {
+            "field": "last_modified"
+          },
+          "license": {
+            "extra": true,
+            "field": "license_id"
+          },
+          "accessURL": {
+            "field": "accessURL"
+          },
+          "field": {
+            "extra": true,
+            "field": "attributesDescription"
+          }
+        }
+      },
+      "keyword": {
+        "field": "tags"
+      },
+
+      "superTheme": {
+        "extra": true,
+        "field": "globalGroups",
+        "type": "array",
+        "split": ","
+      },
+      "temporal": {
+        "extra": true,
+        "field": "dateRange"
+      },
+      "accrualPeriodicity": {
+        "extra": true,
+        "field": "updateFrequency"
+      },
+      "language": {
+        "extra": true,
+        "type": "array",
+        "field": "Language",
+        "split": ","
+      },
+      "references": {
+        "type": "array",
+        "extra": true,
+        "field": "references",
+        "split": ","
+      },
+      "theme": {
+        "field": "groups"
+      }
+    }
+  }

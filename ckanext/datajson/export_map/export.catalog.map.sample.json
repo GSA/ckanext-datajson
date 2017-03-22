@@ -99,9 +99,6 @@
     "distribution": {
       "wrapper": "generate_distribution",
       "map": {
-        "accessURL": {
-          "field": "url"
-        },
         "mediaType": {
           "field": "mimetype"
         },
@@ -142,12 +139,6 @@
       "type": "array",
       "extra": true,
       "field": "Program Code",
-      "split": ","
-    },
-    "language": {
-      "type": "array",
-      "extra": true,
-      "field": "Language",
       "split": ","
     },
     "references": {

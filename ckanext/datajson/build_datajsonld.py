@@ -43,7 +43,7 @@ jsonld_metadata_mapping = {
     "programCode": "pod:programCode",
     "accessLevelComment": "pod:accessLevelComment",
     "dataDictionary": "dcat:dataDictionary",
-    "accessURL": "dcat:accessURL",
+
     "webService": "pod:webService",
     "format": "dcterms:format", # must be a dcterms:MediaTypeOrExtent
     "license": "dcterms:license",
