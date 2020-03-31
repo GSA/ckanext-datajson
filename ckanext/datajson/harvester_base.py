@@ -5,7 +5,7 @@ from ckan.model import Session, Package
 from ckan.logic import ValidationError, NotFound, get_action
 from ckan.lib.munge import munge_title_to_name
 from ckan.lib.search.index import PackageSearchIndex
-from ckan.lib.navl.dictization_functions import Invalid
+from ckan.lib.navl.dictization_functions import Invalid, DataError
 from ckan.lib.navl.validators import ignore_empty
 
 from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, \
@@ -396,11 +396,12 @@ class DatasetHarvesterBase(HarvesterBase):
         return elem + msg
 
     def _size_check(self, key, value):
-        msg = ''
         if key in SIZE_CHECK_KEYS and len(value) >= MAX_SIZE:
-            msg = 'Size of %s is too large. Maximum allowed size is %i.' % (key, MAX_SIZE)
+            raise DataError('%s: Maximum allowed size is %i. Actual size is %i.' % (
+                    key, MAX_SIZE, len(value)
+            ))
 
-        return msg
+        return True
 
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
@@ -620,9 +621,10 @@ class DatasetHarvesterBase(HarvesterBase):
 
         for key, value in dataset_processed.iteritems():
 
-            oversized_message = self._size_check(key, value)
-            if oversized_message:
-                self._save_object_error(oversized_message, harvest_object, 'Import')
+            try:
+                self._size_check(key, value)
+            except DataError, e:
+                self._save_object_error(e.error, harvest_object, 'Import')
                 return None
 
             if key in skip_processed:
