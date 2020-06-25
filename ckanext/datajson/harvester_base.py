@@ -195,9 +195,7 @@ class DatasetHarvesterBase(HarvesterBase):
         # first, mark the status in harvest_source config, which
         # triggers a children harvest_job after parents job is finished.
         source = harvest_job.source
-        source_config = json.loads(source.config or '{}')
-        # run status: None, or parents_run, or children_run?
-        run_status = source_config.get('datajson_collection')
+        
         if parent_identifiers:
             for parent in parent_identifiers & child_identifiers:
                 self._save_gather_error("Collection identifier '%s' \
@@ -206,37 +204,6 @@ class DatasetHarvesterBase(HarvesterBase):
 
             new_parents = set(identifier for identifier in parent_identifiers \
                 if identifier not in existing_parents.keys())
-            if new_parents:
-                if not run_status:
-                    # fresh start
-                    run_status = 'parents_run'
-                    source_config['datajson_collection'] = run_status
-                    source.config = json.dumps(source_config)
-                    source.save()
-                elif run_status == 'children_run':
-                    # it means new parents are tried and failed.
-                    # but skip some which have previously reported with
-                    # parent_identifiers & child_identifiers
-                    for parent in new_parents - \
-                        (parent_identifiers & child_identifiers):
-                        self._save_gather_error("Collection identifier '%s' \
-                            not found. Records which are part of this \
-                            collection will not be harvested." \
-                            % parent, harvest_job)
-                else:
-                    # run_status was parents_run, and did not finish.
-                    # something wrong but not sure what happened.
-                    # let's leave it as it is, let it run one more time.
-                    pass
-            else:
-                # all parents are already in place. run it as usual.
-                run_status = None
-        elif run_status:
-            # need to clear run_status
-            run_status = None
-            source_config['datajson_collection'] = run_status
-            source.config = json.dumps(source_config)
-            source.save()
                     
         # Create HarvestObjects for any records in the remote catalog.
             
@@ -245,7 +212,7 @@ class DatasetHarvesterBase(HarvesterBase):
         unique_datasets = set()
         
         filters = self.load_config(harvest_job.source)["filters"]
-
+        
         for dataset in source_datasets:
             # Create a new HarvestObject for this dataset and save the
             # dataset metdata inside it for later.
@@ -260,21 +227,6 @@ class DatasetHarvesterBase(HarvesterBase):
             if not matched_filters:
                 continue
 
-            if parent_identifiers and new_parents \
-                and dataset['identifier'] not in parent_identifiers \
-                and dataset.get('isPartOf') in new_parents:
-                if run_status == 'parents_run':
-                    # skip those whose parents still need to run.
-                    continue
-                else:
-                    # which is 'children_run'.
-                    # error out since parents got issues.
-                    self._save_gather_error(
-                        "Record with identifier '%s': isPartOf '%s' points to \
-                        an erroneous record." % (dataset['identifier'],
-                            dataset.get('isPartOf')), harvest_job)
-                    continue
-
             # Some source contains duplicate identifiers. skip all except the first one
             if dataset['identifier'] in unique_datasets:
                 self._save_gather_error("Duplicate entry ignored for identifier: '%s'." % (dataset['identifier']), harvest_job)
@@ -285,6 +237,7 @@ class DatasetHarvesterBase(HarvesterBase):
             # it into our system. Otherwise, assign a brand new GUID to the
             # HarvestObject. I'm not sure what the point is of that.
             
+            log.info('Check existing dataset: {}'.format(dataset['identifier']))
             if dataset['identifier'] in existing_datasets:
                 pkg = existing_datasets[dataset["identifier"]]
                 pkg_id = pkg["id"]
@@ -300,7 +253,7 @@ class DatasetHarvesterBase(HarvesterBase):
                     continue
             else:
                 pkg_id = uuid.uuid4().hex
-
+            
             # Create a new HarvestObject and store in it the GUID of the
             # existing dataset (if it exists here already) and the dataset's
             # metadata from the remote catalog file.
@@ -310,12 +263,18 @@ class DatasetHarvesterBase(HarvesterBase):
                 extras.append(HarvestObjectExtra(
                     key='is_collection', value=True))
             elif dataset.get('isPartOf'):
-                parent_pkg_id = existing_parents[dataset.get('isPartOf')]['id']
+                is_part_of = dataset.get('isPartOf')
+                existing_parent = existing_parents.get(is_part_of, None)
+                if existing_parent is None:  # maybe the parent is not harvested yet
+                    parent_pkg_id = 'UNDEFINED'
+                else:
+                    parent_pkg_id = existing_parent['id']
                 extras.append(HarvestObjectExtra(
                     key='collection_pkg_id', value=parent_pkg_id))
             for k, v in catalog_extras.iteritems():
                 extras.append(HarvestObjectExtra(key=k, value=v))
 
+            log.info('Datajson creates a HO: {}'.format(dataset['identifier']))
             obj = HarvestObject(
                 guid=pkg_id,
                 job=harvest_job,
@@ -424,23 +383,6 @@ class DatasetHarvesterBase(HarvesterBase):
                 parent_pkg_id = extra.value
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
-
-        # if this dataset is part of collection, we need to check if
-        # parent dataset exist or not. we dont support any hierarchy
-        # in this, so the check does not apply to those of is_collection
-        if parent_pkg_id and not is_collection:
-            parent_pkg = None
-            try:
-                parent_pkg = get_action('package_show')(self.context(),
-                    { "id": parent_pkg_id })
-            except:
-                pass
-            if not parent_pkg:
-                parent_check_message = "isPartOf identifer '%s' not found." \
-                    % dataset.get('isPartOf')
-                self._save_object_error(parent_check_message, harvest_object,
-                    'Import')
-                return None
 
 
         # do title check here
