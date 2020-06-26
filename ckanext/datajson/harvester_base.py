@@ -266,7 +266,7 @@ class DatasetHarvesterBase(HarvesterBase):
                 is_part_of = dataset.get('isPartOf')
                 existing_parent = existing_parents.get(is_part_of, None)
                 if existing_parent is None:  # maybe the parent is not harvested yet
-                    parent_pkg_id = 'UNDEFINED'
+                    parent_pkg_id = 'IPO:{}'.format(is_part_of)
                 else:
                     parent_pkg_id = existing_parent['id']
                 extras.append(HarvestObjectExtra(
@@ -381,6 +381,32 @@ class DatasetHarvesterBase(HarvesterBase):
                 is_collection = True
             if extra.key == 'collection_pkg_id' and extra.value:
                 parent_pkg_id = extra.value
+                if parent_pkg_id.startswith('IPO:'):
+                    log.info('IPO found {}'.format(parent_pkg_id))
+                    parent_identifier = parent_pkg_id.replace('IPO:', '') 
+                    # check if parent is already harvested
+                    try:
+                        ps = p.toolkit.get_action('package_search')
+                        ctx = {'model': model, 'ignore_auth': True}
+                        dd = {'extras': {'identifier': parent_identifier}}
+                        parents = ps(ctx, dd)
+                        results = parents['results']
+                        parent = None
+                        for dataset in results:
+                            extras = dataset.get('extras', [])
+                            for ex in extras:
+                                if ex['key'] == 'identifier':
+                                    if ex['value'] == parent_identifier:
+                                        parent = dataset
+                        if parent is None:
+                            # move this to the queue
+                            raise ValueError('Move to the Queue')
+                        else:
+                            log.info('parent FOUND {}'.format(parent_identifier))
+                            raise ValueError('Found')
+
+                    except:
+                        raise
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
 
