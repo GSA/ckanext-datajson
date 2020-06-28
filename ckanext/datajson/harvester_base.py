@@ -1,7 +1,7 @@
 from ckan.lib.base import c
 from ckan import model
 from ckan import plugins as p
-from ckan.model import Session, Package
+from ckan.model import Session, Package, PackageExtra
 from ckan.logic import ValidationError, NotFound, get_action
 from ckan.logic.validators import name_validator
 from ckan.lib.munge import munge_title_to_name
@@ -386,6 +386,8 @@ class DatasetHarvesterBase(HarvesterBase):
                     parent_identifier = parent_pkg_id.replace('IPO:', '') 
                     # check if parent is already harvested
                     try:
+                        # result = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup', 
+                        #                                             PackageExtra.value.contains(parent_identifier)).first()
                         ps = p.toolkit.get_action('package_search')
                         ctx = {'model': model, 'ignore_auth': True}
                         dd = {'extras': {'identifier': parent_identifier}}
