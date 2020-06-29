@@ -1,7 +1,7 @@
 from ckan.lib.base import c
 from ckan import model
 from ckan import plugins as p
-from ckan.model import Session, Package
+from ckan.model import Session, Package, PackageExtra
 from ckan.logic import ValidationError, NotFound, get_action
 from ckan.logic.validators import name_validator
 from ckan.lib.munge import munge_title_to_name
@@ -281,7 +281,13 @@ class DatasetHarvesterBase(HarvesterBase):
                 extras=extras,
                 content=json.dumps(dataset, sort_keys=True)) # use sort_keys to preserve field order so hashes of this string are constant from run to run
             obj.save()
-            object_ids.append(obj.id)
+        
+            # when we harvest a child we NEED a parent already harvested
+            # so, we harvest first parents and then children.
+            if dataset['identifier'] in parent_identifiers:
+                object_ids.insert(0, obj.id)
+            else:    
+                object_ids.append(obj.id)
             
         # Remove packages no longer in the remote catalog.
         for upstreamid, pkg in existing_datasets.items():
@@ -382,34 +388,30 @@ class DatasetHarvesterBase(HarvesterBase):
             if extra.key == 'collection_pkg_id' and extra.value:
                 parent_pkg_id = extra.value
                 if parent_pkg_id.startswith('IPO:'):
+                    # it's an IsPartOf ("identifier" at the external source)
                     log.info('IPO found {}'.format(parent_pkg_id))
                     parent_identifier = parent_pkg_id.replace('IPO:', '') 
-                    # check if parent is already harvested
-                    try:
-                        ps = p.toolkit.get_action('package_search')
-                        ctx = {'model': model, 'ignore_auth': True}
-                        dd = {'extras': {'identifier': parent_identifier}}
-                        parents = ps(ctx, dd)
-                        results = parents['results']
-                        parent = None
-                        for dataset in results:
-                            extras = dataset.get('extras', [])
-                            for ex in extras:
-                                if ex['key'] == 'identifier':
-                                    if ex['value'] == parent_identifier:
-                                        parent = dataset
-                        if parent is None:
-                            # move this to the queue
-                            raise ValueError('Move to the Queue')
-                        else:
-                            log.info('parent FOUND {}'.format(parent_identifier))
-                            raise ValueError('Found')
 
-                    except:
-                        raise
+                    # check if parent is already harvested
+                    expected_value = '"identifier": "{}"'.format(parent_identifier)
+                    results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup', 
+                        PackageExtra.value.contains(expected_value))
+
+                    if results.count() == 0:
+                        # the parent still not exists, move this to the bottom
+                        log.error('Parent not found: {}'.format(parent_identifier))
+                        # TODO duplicate harvest_object
+                        harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
+                        harvest_object_error.save()
+                        raise Exception('Parent not found: {}'.format(parent_identifier))
+                        return False
+                    else:
+                        child = results.first()
+                        log.error('Parent found: {} -> {}'.format(parent_identifier, child.package_id))
+                        parent_pkg_id = child.package_id
+                    
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
-
 
         # do title check here
         # https://github.com/GSA/datagov-deploy/issues/953
