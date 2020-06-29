@@ -96,10 +96,10 @@ class TestDataJSONHarvester(object):
     def test_datason_usda(self):
         url = 'http://127.0.0.1:%s/usda' % mock_datajson_source.PORT
         harvest_object, result, dataset, errors = self.run_source(url=url)
-        expected_title = "Department of Agriculture Congressional Logs for Fiscal Year 2014"
+        expected_title = "Pesticide Data Program"
         assert_equal(dataset.title, expected_title)
         tags = [tag.name for tag in dataset.get_tags()]
-        assert_in(munge_title_to_name("Congressional Logs"), tags)
+        assert_in("baby", tags)
         assert_equal(len(dataset.resources), 1)
 
     def test_datajson_reserverd_word_as_title(self):
