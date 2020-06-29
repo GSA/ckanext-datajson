@@ -393,16 +393,13 @@ class DatasetHarvesterBase(HarvesterBase):
                 results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup',
                                                              PackageExtra.value.contains(expected_value))
                 if results.count() == 0:
-                    # the parent still not exists, move this to the bottom
-                    log.error('Parent not found: {}'.format(parent_identifier))
-                    # TODO duplicate harvest_object
                     harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
                     harvest_object_error.save()
-                    raise Exception('Parent not found: {}'.format(parent_identifier))
+                    raise Exception('Parent not found: {}'.format(parent_pkg_id))
                     return False
                 else:
                     child = results.first()
-                    log.error('Parent found: {} -> {}'.format(parent_identifier, child.package_id))
+                    log.error('Parent found: {} -> {}'.format(parent_pkg_id, child.package_id))
                     parent_pkg_id = child.package_id
 
             if extra.key.startswith('catalog_'):
