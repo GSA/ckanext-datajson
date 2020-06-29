@@ -1,5 +1,6 @@
 FROM openknowledge/ckan-dev:2.8
 
+RUN apk add py-cryptography
 
 # Install any extensions needed by your CKAN instance
 # (Make sure to add the plugins to CKAN__PLUGINS in the .env file)
