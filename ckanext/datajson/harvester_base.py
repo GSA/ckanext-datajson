@@ -212,7 +212,7 @@ class DatasetHarvesterBase(HarvesterBase):
         unique_datasets = set()
         
         filters = self.load_config(harvest_job.source)["filters"]
-        
+
         for dataset in source_datasets:
             # Create a new HarvestObject for this dataset and save the
             # dataset metdata inside it for later.
@@ -253,7 +253,7 @@ class DatasetHarvesterBase(HarvesterBase):
                     continue
             else:
                 pkg_id = uuid.uuid4().hex
-            
+
             # Create a new HarvestObject and store in it the GUID of the
             # existing dataset (if it exists here already) and the dataset's
             # metadata from the remote catalog file.
@@ -266,7 +266,7 @@ class DatasetHarvesterBase(HarvesterBase):
                 is_part_of = dataset.get('isPartOf')
                 existing_parent = existing_parents.get(is_part_of, None)
                 if existing_parent is None:  # maybe the parent is not harvested yet
-                    parent_pkg_id = 'IPO:{}'.format(is_part_of)
+                    parent_pkg_id = is_part_of
                 else:
                     parent_pkg_id = existing_parent['id']
                 extras.append(HarvestObjectExtra(
@@ -282,8 +282,8 @@ class DatasetHarvesterBase(HarvesterBase):
                 content=json.dumps(dataset, sort_keys=True)) # use sort_keys to preserve field order so hashes of this string are constant from run to run
             obj.save()
         
-            # when we harvest a child we NEED a parent already harvested
-            # so, we harvest first parents and then children.
+            # we are sorting parent datasets in the list first and then children so that the parents are 
+            # harvested first, we then use the parent id to associate the children to the parent
             if dataset['identifier'] in parent_identifiers:
                 object_ids.insert(0, obj.id)
             else:    
@@ -387,29 +387,24 @@ class DatasetHarvesterBase(HarvesterBase):
                 is_collection = True
             if extra.key == 'collection_pkg_id' and extra.value:
                 parent_pkg_id = extra.value
-                if parent_pkg_id.startswith('IPO:'):
-                    # it's an IsPartOf ("identifier" at the external source)
-                    log.info('IPO found {}'.format(parent_pkg_id))
-                    parent_identifier = parent_pkg_id.replace('IPO:', '') 
 
-                    # check if parent is already harvested
-                    expected_value = '"identifier": "{}"'.format(parent_identifier)
-                    results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup', 
-                        PackageExtra.value.contains(expected_value))
+                #  check if parent is already harvested
+                expected_value = '"identifier": "{}"'.format(parent_pkg_id)
+                results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup',
+                                                             PackageExtra.value.contains(expected_value))
+                if results.count() == 0:
+                    # the parent still not exists, move this to the bottom
+                    log.error('Parent not found: {}'.format(parent_identifier))
+                    # TODO duplicate harvest_object
+                    harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
+                    harvest_object_error.save()
+                    raise Exception('Parent not found: {}'.format(parent_identifier))
+                    return False
+                else:
+                    child = results.first()
+                    log.error('Parent found: {} -> {}'.format(parent_identifier, child.package_id))
+                    parent_pkg_id = child.package_id
 
-                    if results.count() == 0:
-                        # the parent still not exists, move this to the bottom
-                        log.error('Parent not found: {}'.format(parent_identifier))
-                        # TODO duplicate harvest_object
-                        harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
-                        harvest_object_error.save()
-                        raise Exception('Parent not found: {}'.format(parent_identifier))
-                        return False
-                    else:
-                        child = results.first()
-                        log.error('Parent found: {} -> {}'.format(parent_identifier, child.package_id))
-                        parent_pkg_id = child.package_id
-                    
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
 
