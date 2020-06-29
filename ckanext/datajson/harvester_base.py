@@ -266,7 +266,7 @@ class DatasetHarvesterBase(HarvesterBase):
                 is_part_of = dataset.get('isPartOf')
                 existing_parent = existing_parents.get(is_part_of, None)
                 if existing_parent is None:  # maybe the parent is not harvested yet
-                    parent_pkg_id = is_part_of
+                    parent_pkg_id = 'IPO:{}'.format(is_part_of)
                 else:
                     parent_pkg_id = existing_parent['id']
                 extras.append(HarvestObjectExtra(
@@ -387,20 +387,24 @@ class DatasetHarvesterBase(HarvesterBase):
                 is_collection = True
             if extra.key == 'collection_pkg_id' and extra.value:
                 parent_pkg_id = extra.value
+                if parent_pkg_id.startswith('IPO:'):
+                    # it's an IsPartOf ("identifier" at the external source)
+                    log.info('IPO found {}'.format(parent_pkg_id))
 
-                #  check if parent is already harvested
-                expected_value = '"identifier": "{}"'.format(parent_pkg_id)
-                results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup',
-                                                             PackageExtra.value.contains(expected_value))
-                if results.count() == 0:
-                    harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
-                    harvest_object_error.save()
-                    raise Exception('Parent not found: {}'.format(parent_pkg_id))
-                    return False
-                else:
-                    child = results.first()
-                    log.error('Parent found: {} -> {}'.format(parent_pkg_id, child.package_id))
-                    parent_pkg_id = child.package_id
+                    #  check if parent is already harvested
+                    parent_identifier = parent_pkg_id.replace('IPO:', '') 
+                    expected_value = '"identifier": "{}"'.format(parent_pkg_id)
+                    results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup',
+                                                                PackageExtra.value.contains(expected_value))
+                    if results.count() == 0:
+                        harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
+                        harvest_object_error.save()
+                        raise Exception('Parent not found: {}'.format(parent_pkg_id))
+                        return False
+                    else:
+                        child = results.first()
+                        log.error('Parent found: {} -> {}'.format(parent_pkg_id, child.package_id))
+                        parent_pkg_id = child.package_id
 
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
