@@ -4,41 +4,7 @@
     "@context": "https://project-open-data.cio.gov/v1.1/schema/catalog.jsonld",
     "@type": "dcat:Catalog",
     "dataset": [
-        {
-            "@type": "dcat:Dataset",
-            "title": "Employee Relations Roundtables",
-            "description": "The U.S. Office of Personnel Management (OPM)'s Partnership and Labor Relations holds Roundtables periodically as an ongoing effort to develop a highly skilled cadre of Employee and Labor Relations practitioners.  Distinguished speakers present on a wide range of topics of interest for this community.  These training opportunities are interactive and allow the participants to ask questions of the presenters.",
-            "modified": "2014-02-09",
-            "accessLevel": "public",
-            "identifier": "OPM-ERround-0001",
-            "landingPage": "http://www.opm.gov/policy-data-oversight/employee-relations/training/#url=Roundtables",
-            "license": "http://www.usa.gov/publicdomain/label/1.0/",
-            "publisher": {
-                "@type": "org:Organization",
-                "name": "U.S. Office of Personnel Management"
-            },
-            "contactPoint": {
-                "@type": "vcard:Contact",
-                "fn": "LaShann Freeman",
-                "hasEmail": "mailto:lashann.freeman@opm.gov"
-            },
-            "keyword": [
-                "employee relations",
-                "practitioners",
-                "roundtables",
-                "training",
-                "webcast"
-            ],
-            "bureauCode": [
-                "027:00"
-            ],
-            "programCode": [
-                "027:000"
-            ],
-            "language": [
-                "en-US"
-            ]
-        },
+        
         {
             "@type": "dcat:Dataset",
             "title": "Addressing AWOL",
@@ -81,6 +47,41 @@
                 "employee relations",
                 "leave abuse",
                 "leave restriction",
+                "practitioners",
+                "roundtables",
+                "training",
+                "webcast"
+            ],
+            "bureauCode": [
+                "027:00"
+            ],
+            "programCode": [
+                "027:000"
+            ],
+            "language": [
+                "en-US"
+            ]
+        },
+        {
+            "@type": "dcat:Dataset",
+            "title": "Employee Relations Roundtables",
+            "description": "The U.S. Office of Personnel Management (OPM)'s Partnership and Labor Relations holds Roundtables periodically as an ongoing effort to develop a highly skilled cadre of Employee and Labor Relations practitioners.  Distinguished speakers present on a wide range of topics of interest for this community.  These training opportunities are interactive and allow the participants to ask questions of the presenters.",
+            "modified": "2014-02-09",
+            "accessLevel": "public",
+            "identifier": "OPM-ERround-0001",
+            "landingPage": "http://www.opm.gov/policy-data-oversight/employee-relations/training/#url=Roundtables",
+            "license": "http://www.usa.gov/publicdomain/label/1.0/",
+            "publisher": {
+                "@type": "org:Organization",
+                "name": "U.S. Office of Personnel Management"
+            },
+            "contactPoint": {
+                "@type": "vcard:Contact",
+                "fn": "LaShann Freeman",
+                "hasEmail": "mailto:lashann.freeman@opm.gov"
+            },
+            "keyword": [
+                "employee relations",
                 "practitioners",
                 "roundtables",
                 "training",
