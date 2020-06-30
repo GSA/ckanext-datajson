@@ -399,7 +399,7 @@ class DatasetHarvesterBase(HarvesterBase):
                     if results.count() == 0:
                         harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
                         harvest_object_error.save()
-                        raise Exception('Parent not found: {}'.format(parent_pkg_id))
+                        log.error('Parent not found: {}'.format(parent_pkg_id))
                         return False
                     else:
                         child = results.first()
