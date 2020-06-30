@@ -366,6 +366,41 @@ class DatasetHarvesterBase(HarvesterBase):
             raise DataError('%s: Maximum allowed size is %i. Actual size is %i.' % (
                     key, MAX_SIZE, len(value)
             ))
+    
+    def is_part_of_to_package_id(self, ipo, harvest_object):
+        """ get an identifier from external source (isPartOf)
+            and return the dataset (or False if is not found) """
+        ps = p.toolkit.get_action('package_search')
+        query = 'extras_identifier:{}'.format(ipo)
+        results = ps(self.context(), {"fq": query})
+        
+        if results['count'] == 0:
+            msg = 'Parent identifier not found: "{}"'.format(ipo)
+            harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
+            harvest_object_error.save()
+            log.error(msg)
+            return False
+        elif results['count'] > 1:  
+            # possible check identifier collision
+            # check the URL of the source to validate
+            datasets = results['results']
+            harvest_source = harvest_object.source
+            
+            for dataset in datasets:
+                hs_ids = [extra['value'] for extra in dataset.get('extras', []) if extra['key'] == 'harvest_source_id'] 
+                if harvest_source.id in hs_ids:
+                    log.info('Parent dataset identified correctly')
+                    return dataset
+                else:
+                    log.info('{} not found at {}'.format(harvest_source.id, hs_ids))
+
+            msg = 'Unable to identify parent for: "{}"'.format(ipo)
+            harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
+            harvest_object_error.save()
+            log.error(msg)
+            return False
+        else:
+            return results['results'][0]
 
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
@@ -393,18 +428,10 @@ class DatasetHarvesterBase(HarvesterBase):
 
                     #  check if parent is already harvested
                     parent_identifier = parent_pkg_id.replace('IPO:', '') 
-                    expected_value = '"identifier": "{}"'.format(parent_identifier)
-                    results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup',
-                                                                PackageExtra.value.contains(expected_value))
-                    if results.count() == 0:
-                        harvest_object_error = HarvestObjectError(message='Parent not found', object=harvest_object)
-                        harvest_object_error.save()
-                        log.error('Parent not found: {}'.format(parent_pkg_id))
+                    parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
+                    if not parent:
                         return False
-                    else:
-                        child = results.first()
-                        log.error('Parent found: {} -> {}'.format(parent_pkg_id, child.package_id))
-                        parent_pkg_id = child.package_id
+                    parent_pkg_id = parent['id']
 
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
