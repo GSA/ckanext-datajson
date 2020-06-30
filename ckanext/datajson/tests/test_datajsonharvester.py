@@ -1,9 +1,16 @@
-import copy
-from urllib2 import URLError
-from nose.tools import assert_equal, assert_raises, assert_in
 import json
-from mock import patch, MagicMock, Mock
-from requests.exceptions import HTTPError, RequestException
+import logging
+from urllib2 import URLError
+
+import ckanext.harvest.model as harvest_model
+import mock_datajson_source
+from ckan import model
+from ckan.lib.munge import munge_title_to_name
+from ckanext.datajson.harvester_datajson import DataJsonHarvester
+
+from factories import HarvestJobObj, HarvestSourceObj
+from nose.tools import (assert_equal, assert_false, assert_in, assert_raises,
+                        assert_true)
 
 try:
     from ckan.tests.helpers import reset_db, call_action
@@ -11,26 +18,12 @@ try:
 except ImportError:
     from ckan.new_tests.helpers import reset_db, call_action
     from ckan.new_tests.factories import Organization, Group
-from ckan import model
-from ckan.plugins import toolkit
-from ckan.lib.munge import munge_title_to_name
-# from ckanext.harvest.tests.factories import (HarvestSourceObj, HarvestJobObj,
-#                                              HarvestObjectObj)
-from factories import (HarvestSourceObj,
-                       HarvestJobObj,
-                       HarvestObjectObj)
 
-import ckanext.harvest.model as harvest_model
-from ckanext.harvest.harvesters.base import HarvesterBase
-from ckanext.datajson.harvester_datajson import DataJsonHarvester
-import logging
 log = logging.getLogger(__name__)
-
-import mock_datajson_source
 
 
 class TestDataJSONHarvester(object):
-    
+
     @classmethod
     def setup_class(cls):
         log.info('Starting mock http server')
@@ -77,7 +70,7 @@ class TestDataJSONHarvester(object):
             log.info('result 1=%s', result)
             if len(harvest_object.errors) > 0:
                 self.errors = harvest_object.errors
-                
+
     def run_import(self):
         # import stage
         datasets = []
@@ -88,15 +81,15 @@ class TestDataJSONHarvester(object):
             log.info('ho errors 2=%s', harvest_object.errors)
             log.info('result 2=%s', result)
             if len(harvest_object.errors) > 0:
-                self.errors = harvest_object.errors 
-                
+                self.errors = harvest_object.errors
+
             log.info('ho pkg id=%s', harvest_object.package_id)
             dataset = model.Package.get(harvest_object.package_id)
             if dataset:
                 datasets.append(dataset)
                 log.info('dataset name=%s', dataset.name)
 
-        return datasets 
+        return datasets
 
     def run_source(self, url):
         self.run_gather(url)
@@ -115,7 +108,7 @@ class TestDataJSONHarvester(object):
         tags = [tag.name for tag in dataset.get_tags()]
         assert_in(munge_title_to_name("ORNL"), tags)
         assert_equal(len(dataset.resources), 1)
-    
+
     def test_datason_usda(self):
         url = 'http://127.0.0.1:%s/usda' % mock_datajson_source.PORT
         datasets = self.run_source(url=url)
@@ -124,7 +117,7 @@ class TestDataJSONHarvester(object):
         assert_equal(dataset.title, expected_title)
         tags = [tag.name for tag in dataset.get_tags()]
         assert_equal(len(dataset.resources), 1)
-        assert_in(munge_title_to_name("Congressional Logs"), tags)     
+        assert_in(munge_title_to_name("Congressional Logs"), tags)
 
     def test_datajson_collection(self):
         """ harvest from a source with a parent in the second place
@@ -137,11 +130,29 @@ class TestDataJSONHarvester(object):
             harvest_object = harvest_model.HarvestObject.get(obj_id)
             content = json.loads(harvest_object.content)
             identifiers.append(content['identifier'])
-            
+
         # We always expect the parent to be the first on the list
         expected_obj_ids = ['OPM-ERround-0001', 'OPM-ERround-0001-AWOL', 'OPM-ERround-0001-Retire']
         assert_equal(expected_obj_ids, identifiers)
-        
+
+    def test_datajson_is_part_of_package_id(self):
+        url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
+        obj_ids = self.run_gather(url=url)
+
+        for obj_id in obj_ids:
+            harvest_object = harvest_model.HarvestObject.get(obj_id)
+            content = json.loads(harvest_object.content)
+            results = self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object)
+            if content['identifier'] == 'OPM-ERround-0001':
+                assert_false(results)
+            if content['identifier'] == 'OPM-ERround-0001-AWOL':
+                assert_true(results)
+            if content['identifier'] == 'OPM-ERround-0001-Retire':
+                assert_true(results)
+
+        results = self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
+        assert_equal(results, False)
+
     def test_datajson_reserverd_word_as_title(self):
         url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
         self.run_source(url=url)
@@ -150,7 +161,7 @@ class TestDataJSONHarvester(object):
         assert_equal(errors[0].stage, expected_error_stage)
         expected_error_message = "title: Search. That name cannot be used."
         assert_equal(errors[0].message, expected_error_message)
-    
+
     def test_datajson_large_spatial(self):
         url = 'http://127.0.0.1:%s/error-large-spatial' % mock_datajson_source.PORT
         self.run_source(url=url)
@@ -166,13 +177,13 @@ class TestDataJSONHarvester(object):
         dataset = datasets[0]
         expected_title = "Sample Title NUll Spatial"
         assert_equal(dataset.title, expected_title)
-   
+
     def test_datason_404(self):
         url = 'http://127.0.0.1:%s/404' % mock_datajson_source.PORT
-        with assert_raises(URLError) as harvest_context:
+        with assert_raises(URLError):
             self.run_source(url=url)
-        
+
     def test_datason_500(self):
         url = 'http://127.0.0.1:%s/500' % mock_datajson_source.PORT
-        with assert_raises(URLError) as harvest_context:
+        with assert_raises(URLError):
             self.run_source(url=url)
