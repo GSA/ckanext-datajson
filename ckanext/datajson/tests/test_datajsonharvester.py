@@ -68,7 +68,7 @@ class TestDataJSONHarvester(object):
         log.info('ho errors=%s', harvest_object.errors)
         log.info('result 1=%s', result)
 
-        # fetch stage
+        # import stage
         log.info('IMPORTING %s', url)
         result = harvester.import_stage(harvest_object)
 
@@ -101,6 +101,12 @@ class TestDataJSONHarvester(object):
         tags = [tag.name for tag in dataset.get_tags()]
         assert_in("baby", tags)
         assert_equal(len(dataset.resources), 1)
+
+    def test_datajson_collection(self):
+        url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
+        harvest_object, result, dataset, errors = self.run_source(url=url)
+        parent_title = "Employee Relations Roundtables"
+        assert_equal(dataset.title, parent_title)
 
     def test_datajson_reserverd_word_as_title(self):
         url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
