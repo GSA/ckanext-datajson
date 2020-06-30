@@ -393,7 +393,7 @@ class DatasetHarvesterBase(HarvesterBase):
 
                     #  check if parent is already harvested
                     parent_identifier = parent_pkg_id.replace('IPO:', '') 
-                    expected_value = '"identifier": "{}"'.format(parent_pkg_id)
+                    expected_value = '"identifier": "{}"'.format(parent_identifier)
                     results = Session.query(PackageExtra).filter(PackageExtra.key == 'extras_rollup',
                                                                 PackageExtra.value.contains(expected_value))
                     if results.count() == 0:
