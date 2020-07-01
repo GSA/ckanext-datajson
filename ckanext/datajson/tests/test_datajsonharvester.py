@@ -171,6 +171,7 @@ class TestDataJSONHarvester(object):
                 parent_counter += 1
             else:
                 assert_equal(is_child, True)
+                assert_equal(is_parent, False)
                 child_counter += 1
 
         assert_equal(child_counter, 2)
