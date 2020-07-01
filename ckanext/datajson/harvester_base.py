@@ -387,14 +387,16 @@ class DatasetHarvesterBase(HarvesterBase):
             harvest_source = harvest_object.source
             
             for dataset in datasets:
-                hs_ids = [extra['value'] for extra in dataset.get('extras', []) if extra['key'] == 'harvest_source_id'] 
+                extras = dataset.get('extras', [])
+                hs_ids = [extra['value'] for extra in extras if extra['key'] == 'harvest_source_id']
+                
                 if harvest_source.id in hs_ids:
                     log.info('Parent dataset identified correctly')
                     return dataset
                 else:
-                    log.info('{} not found at {}'.format(harvest_source.id, hs_ids))
+                    log.info('{} not found at {}. Extras {}'.format(harvest_source.id, hs_ids, extras))
 
-            msg = 'Unable to identify parent for: "{}"'.format(ipo)
+            msg = 'Unable to identify parent for: "{}" ({})'.format(ipo, results['count'])
             harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
             harvest_object_error.save()
             log.error(msg)
@@ -430,6 +432,7 @@ class DatasetHarvesterBase(HarvesterBase):
                     parent_identifier = parent_pkg_id.replace('IPO:', '') 
                     parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
                     if not parent:
+                        log.error('No parent for harvested dataset. IPO:'.format(parent_identifier))
                         return False
                     parent_pkg_id = parent['id']
 

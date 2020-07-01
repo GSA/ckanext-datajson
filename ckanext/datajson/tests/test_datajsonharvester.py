@@ -77,9 +77,13 @@ class TestDataJSONHarvester(object):
         for harvest_object in self.harvest_objects:
             log.info('IMPORTING %s' % harvest_object.id)
             result = self.harvester.import_stage(harvest_object)
-
+            
             log.info('ho errors 2=%s', harvest_object.errors)
             log.info('result 2=%s', result)
+            
+            if not result:
+                log.error('Dataset not imported: {}. Errors: {}. Content: {}'.format(harvest_object.package_id, harvest_object.errors, harvest_object.content))
+
             if len(harvest_object.errors) > 0:
                 self.errors = harvest_object.errors
 
@@ -134,6 +138,83 @@ class TestDataJSONHarvester(object):
         # We always expect the parent to be the first on the list
         expected_obj_ids = ['OPM-ERround-0001', 'OPM-ERround-0001-AWOL', 'OPM-ERround-0001-Retire']
         assert_equal(expected_obj_ids, identifiers)
+    
+    def test_harvesting_parent_child_collections(self):
+        """ Test that parent are beeing harvested first.
+            When we harvest a child the parent must exists
+            data.json from: https://www.opm.gov/data.json """
+
+        url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
+        obj_ids = self.run_gather(url=url)
+        assert_equal(len(obj_ids), 3)
+        self.run_fetch()
+        datasets = self.run_import()
+        assert_equal(len(datasets), 3)
+        titles = ['Linking Employee Relations and Retirement',
+                  'Addressing AWOL',
+                  'Employee Relations Roundtables']
+
+        parent_counter = 0
+        child_counter = 0
+        
+        for dataset in datasets:
+            assert dataset.title in titles
+            # test we get the spatial as we want: https://github.com/GSA/catalog.data.gov/issues/55
+            extras = json.loads(dataset.extras['extras_rollup'])
+            is_parent = extras.get('collection_metadata', 'false').lower() == 'true'
+            is_child = extras.get('collection_package_id', None) is not None
+
+            log.info('Harvested dataset {} {} {}'.format(dataset.title, is_parent, is_child))
+
+            if dataset.title in ['Employee Relations Roundtables']:
+                assert_equal(is_parent, True)
+                parent_counter += 1
+            else:
+                assert_equal(is_child, True)
+                child_counter += 1
+
+        assert_equal(child_counter, 2)
+        assert_equal(parent_counter, 1)
+    
+    def test_harvesting_parent_child_2_collections(self):
+        """ Test that parent are beeing harvested first.
+            When we harvest a child the parent must exists
+            data.json from: https://www.opm.gov/data.json """
+
+        url = 'http://127.0.0.1:%s/collections2' % mock_datajson_source.PORT
+        obj_ids = self.run_gather(url=url)
+        assert_equal(len(obj_ids), 6)
+        self.run_fetch()
+        datasets = self.run_import()
+        assert_equal(len(datasets), 6)
+        titles = ['Linking Employee Relations and Retirement',
+                  'Addressing AWOL',
+                  'Employee Relations Roundtables',
+                  'Linking Employee Relations and Retirement 2',
+                  'Addressing AWOL 2',
+                  'Employee Relations Roundtables 2']
+
+        parent_counter = 0
+        child_counter = 0
+        
+        for dataset in datasets:
+            assert dataset.title in titles
+            # test we get the spatial as we want: https://github.com/GSA/catalog.data.gov/issues/55
+            extras = json.loads(dataset.extras['extras_rollup'])
+            is_parent = extras.get('collection_metadata', 'false').lower() == 'true'
+            is_child = extras.get('collection_package_id', None) is not None
+
+            log.info('Harvested dataset {} {} {}'.format(dataset.title, is_parent, is_child))
+
+            if dataset.title in ['Employee Relations Roundtables', 'Employee Relations Roundtables 2']:
+                assert_equal(is_parent, True)
+                parent_counter += 1
+            else:
+                assert_equal(is_child, True)
+                child_counter += 1
+
+        assert_equal(child_counter, 4)
+        assert_equal(parent_counter, 2)
 
     def test_datajson_is_part_of_package_id(self):
         url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
