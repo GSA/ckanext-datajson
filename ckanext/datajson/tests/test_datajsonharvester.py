@@ -167,6 +167,7 @@ class TestDataJSONHarvester(object):
 
             if dataset.title in ['Employee Relations Roundtables']:
                 assert_equal(is_parent, True)
+                assert_equal(is_child, False)
                 parent_counter += 1
             else:
                 assert_equal(is_child, True)
