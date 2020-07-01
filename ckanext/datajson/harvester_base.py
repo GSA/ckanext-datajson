@@ -367,11 +367,20 @@ class DatasetHarvesterBase(HarvesterBase):
                     key, MAX_SIZE, len(value)
             ))
     
+    def get_harvest_source_id(self, package_id):
+        harvest_object = model.Session.query(HarvestObject) \
+            .filter(HarvestObject.package_id == package_id) \
+            .filter(HarvestObject.current==True).first()
+
+        return harvest_object.source.id if harvest_object else None
+
     def is_part_of_to_package_id(self, ipo, harvest_object):
         """ get an identifier from external source (isPartOf)
-            and return the dataset (or False if is not found) """
+            and return the dataset (or False if is not found)
+            only if the dataset it's a parent in a collection
+            """
         ps = p.toolkit.get_action('package_search')
-        query = 'extras_identifier:{}'.format(ipo)
+        query = 'extras_identifier:{} AND extras_collection_metadata:true'.format(ipo)
         results = ps(self.context(), {"fq": query})
         
         if results['count'] == 0:
@@ -388,13 +397,18 @@ class DatasetHarvesterBase(HarvesterBase):
             
             for dataset in datasets:
                 extras = dataset.get('extras', [])
-                hs_ids = [extra['value'] for extra in extras if extra['key'] == 'harvest_source_id']
+                identifiers = [extra['value'] for extra in extras if extra['key'] == 'identifier']
+                if ipo not in identifiers:
+                    log.error('BAD SEARCH for {}:{}'.format(ipo, identifiers))
+                    raise Exception('BAD SEARCH for {}:{}'.format(ipo, identifiers))
+
+                dataset_harvest_source_id = self.get_harvest_source_id(dataset['id'])
                 
-                if harvest_source.id in hs_ids:
+                if harvest_source.id == dataset_harvest_source_id:
                     log.info('Parent dataset identified correctly')
                     return dataset
                 else:
-                    log.info('{} not found at {}. Extras {}'.format(harvest_source.id, hs_ids, extras))
+                    log.info('{} not found at {} for {}'.format(harvest_source.id, dataset_harvest_source_id, ipo))
 
             msg = 'Unable to identify parent for: "{}" ({})'.format(ipo, results['count'])
             harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)

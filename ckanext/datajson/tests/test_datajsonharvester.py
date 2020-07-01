@@ -159,10 +159,9 @@ class TestDataJSONHarvester(object):
         
         for dataset in datasets:
             assert dataset.title in titles
-            # test we get the spatial as we want: https://github.com/GSA/catalog.data.gov/issues/55
-            extras = json.loads(dataset.extras['extras_rollup'])
-            is_parent = extras.get('collection_metadata', 'false').lower() == 'true'
-            is_child = extras.get('collection_package_id', None) is not None
+            
+            is_parent = dataset.extras.get('collection_metadata', 'false').lower() == 'true'
+            is_child = dataset.extras.get('collection_package_id', None) is not None
 
             log.info('Harvested dataset {} {} {}'.format(dataset.title, is_parent, is_child))
 
@@ -199,10 +198,9 @@ class TestDataJSONHarvester(object):
         
         for dataset in datasets:
             assert dataset.title in titles
-            # test we get the spatial as we want: https://github.com/GSA/catalog.data.gov/issues/55
-            extras = json.loads(dataset.extras['extras_rollup'])
-            is_parent = extras.get('collection_metadata', 'false').lower() == 'true'
-            is_child = extras.get('collection_package_id', None) is not None
+            
+            is_parent = dataset.extras.get('collection_metadata', 'false').lower() == 'true'
+            is_child = dataset.extras.get('collection_package_id', None) is not None
 
             log.info('Harvested dataset {} {} {}'.format(dataset.title, is_parent, is_child))
 
@@ -219,17 +217,24 @@ class TestDataJSONHarvester(object):
     def test_datajson_is_part_of_package_id(self):
         url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
         obj_ids = self.run_gather(url=url)
+        self.run_fetch()
+        self.run_import()
 
         for obj_id in obj_ids:
             harvest_object = harvest_model.HarvestObject.get(obj_id)
             content = json.loads(harvest_object.content)
+            # get the dataset with this identifier only if is a parent in a collection
             results = self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object)
+            log.info('is_part_of_package_id {} {}'.format(content['identifier'], results))
+
             if content['identifier'] == 'OPM-ERround-0001':
-                assert_false(results)
+                assert_equal(results['title'], 'Employee Relations Roundtables')
             if content['identifier'] == 'OPM-ERround-0001-AWOL':
-                assert_true(results)
+                # this is not a parent
+                assert_false(results)
             if content['identifier'] == 'OPM-ERround-0001-Retire':
-                assert_true(results)
+                # this is not a parent
+                assert_false(results)
 
         results = self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
         assert_equal(results, False)
