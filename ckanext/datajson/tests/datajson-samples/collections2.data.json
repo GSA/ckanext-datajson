@@ -158,7 +158,7 @@
                 "@type": "org:Organization",
                 "name": "U.S. Office of Personnel Management"
             },
-            "isPartOf": "IDF6-OPM-0002",
+            "isPartOf": "IDF6-OPM-0001-PARENT2",
             "contactPoint": {
                 "@type": "vcard:Contact",
                 "fn": "LaShann Freeman",
@@ -202,7 +202,7 @@
                 "@type": "org:Organization",
                 "name": "U.S. Office of Personnel Management"
             },
-            "isPartOf": "IDF6-OPM-0002",
+            "isPartOf": "IDF6-OPM-0001-PARENT2",
             "contactPoint": {
                 "@type": "vcard:Contact",
                 "fn": "LaShann Freeman",
@@ -237,7 +237,7 @@
             "@type": "dcat:Dataset",
             "title": "Employee Relations Roundtables 2",
             "description": "The U.S. Office of Personnel Management (OPM)'s Partnership and Labor Relations holds Roundtables periodically as an ongoing effort to develop a highly skilled cadre of Employee and Labor Relations practitioners.  Distinguished speakers present on a wide range of topics of interest for this community.  These training opportunities are interactive and allow the participants to ask questions of the presenters.",
-            "identifier": "IDF6-OPM-0002",
+            "identifier": "IDF6-OPM-0001-PARENT2",
             "landingPage": "http://www.opm.gov/policy-data-oversight/employee-relations/training/#url=Roundtables",
             "accessLevel": "public",
             "modified": "2011-12-15",

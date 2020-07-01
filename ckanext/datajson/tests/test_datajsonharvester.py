@@ -175,44 +175,57 @@ class TestDataJSONHarvester(object):
         assert_equal(child_counter, 2)
         assert_equal(parent_counter, 1)
     
-    def test_harvesting_parent_child_2_collections(self):
-        """ Test that parent are beeing harvested first.
-            When we harvest a child the parent must exists
-            data.json from: https://www.opm.gov/data.json """
-
+    def get_datasets_from_2_collection(self):
         url = 'http://127.0.0.1:%s/collections2' % mock_datajson_source.PORT
         obj_ids = self.run_gather(url=url)
         assert_equal(len(obj_ids), 6)
         self.run_fetch()
         datasets = self.run_import()
-        assert_equal(len(datasets), 6)
-        titles = ['Linking Employee Relations and Retirement',
-                  'Addressing AWOL',
-                  'Employee Relations Roundtables',
-                  'Linking Employee Relations and Retirement 2',
-                  'Addressing AWOL 2',
-                  'Employee Relations Roundtables 2']
 
+        return datasets
+        
+    def test_datasets_count(self):
+        """ test we harvest the right amount of datasets """
+
+        datasets = self.get_datasets_from_2_collection()
+        assert_equal(len(datasets), 6)
+    
+    def test_parent_child_counts(self):
+        """ Test count for parent and children """
+        
+        datasets = self.get_datasets_from_2_collection()
+        
         parent_counter = 0
         child_counter = 0
         
         for dataset in datasets:
-            assert dataset.title in titles
             
             is_parent = dataset.extras.get('collection_metadata', 'false').lower() == 'true'
-            is_child = dataset.extras.get('collection_package_id', None) is not None
+            parent_package_id = dataset.extras.get('collection_package_id', None)
+            is_child = parent_package_id is not None
 
-            log.info('Harvested dataset {} {} {}'.format(dataset.title, is_parent, is_child))
-
-            if dataset.title in ['Employee Relations Roundtables', 'Employee Relations Roundtables 2']:
-                assert_equal(is_parent, True)
+            if is_parent:
                 parent_counter += 1
-            else:
-                assert_equal(is_child, True)
+            elif is_child:
                 child_counter += 1
-
+                
         assert_equal(child_counter, 4)
         assert_equal(parent_counter, 2)
+
+    def test_harvesting_parent_child_2_collections(self):
+        """ Test that we have the right parents in each case """
+        
+        datasets = self.get_datasets_from_2_collection()
+        
+        for dataset in datasets:
+            parent_package_id = dataset.extras.get('collection_package_id', None)
+            
+            if dataset.title == 'Addressing AWOL':
+                parent = model.Package.get(parent_package_id)
+                assert_equal(parent.title, 'Employee Relations Roundtables')
+            elif dataset.title == 'Addressing AWOL 2':
+                parent = model.Package.get(parent_package_id)
+                assert_equal(parent.title, 'Employee Relations Roundtables 2') 
 
     def test_datajson_is_part_of_package_id(self):
         url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
@@ -224,20 +237,20 @@ class TestDataJSONHarvester(object):
             harvest_object = harvest_model.HarvestObject.get(obj_id)
             content = json.loads(harvest_object.content)
             # get the dataset with this identifier only if is a parent in a collection
-            results = self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object)
-            log.info('is_part_of_package_id {} {}'.format(content['identifier'], results))
+            is_parent_and_is_harvested, dataset = self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object)
+            log.info('is_part_of_package_id {} {}'.format(content['identifier'], dataset))
 
             if content['identifier'] == 'OPM-ERround-0001':
-                assert_equal(results['title'], 'Employee Relations Roundtables')
+                assert_equal(dataset['title'], 'Employee Relations Roundtables')
             if content['identifier'] == 'OPM-ERround-0001-AWOL':
                 # this is not a parent
-                assert_false(results)
+                assert_false(is_parent_and_is_harvested)
             if content['identifier'] == 'OPM-ERround-0001-Retire':
                 # this is not a parent
-                assert_false(results)
+                assert_false(is_parent_and_is_harvested)
 
-        results = self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
-        assert_equal(results, False)
+        is_parent_and_is_harvested, dataset = self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
+        assert_false(is_parent_and_is_harvested)
 
     def test_datajson_reserverd_word_as_title(self):
         url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
