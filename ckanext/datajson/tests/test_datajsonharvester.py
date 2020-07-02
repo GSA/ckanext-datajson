@@ -290,11 +290,20 @@ class TestDataJSONHarvester(object):
         with assert_raises(URLError):
             self.run_source(url=url)
 
-if p.toolkit.check_ckan_version(min_version='2.8'):
-    @mock_action('package_search')
-    def test_is_part_of_to_package_id_fail_no_results(self, mock_package_search):
+    @patch('ckan.plugins.toolkit.get_action')
+    def test_is_part_of_to_package_id_fail_no_results(self, mock_get_action):
         """ unit test for is_part_of_to_package_id function """
-        mock_package_search.return_value = {'count': 0}
+
+        def get_user():
+            return {'name': 'default'}
+
+        def get_action(action_name):
+            if action_name == 'package_search':
+                return {'count': 0}
+            elif action_name == 'get_site_user':
+                return get_user()
+
+        mock_get_action.side_effect=get_action
         
         harvester = DataJsonHarvester()
         dataset = harvester.is_part_of_to_package_id('identifier', None)
