@@ -387,7 +387,7 @@ class DatasetHarvesterBase(HarvesterBase):
             harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
             harvest_object_error.save()
             log.error(msg)
-            return False, None
+            return None
         
         if results['count'] > 1:  
             # possible check identifier collision
@@ -406,7 +406,7 @@ class DatasetHarvesterBase(HarvesterBase):
                 
                 if harvest_source.id == dataset_harvest_source_id:
                     log.info('Parent dataset identified correctly')
-                    return True, dataset
+                    return dataset
                 else:
                     log.info('{} not found at {} for {}'.format(harvest_source.id, dataset_harvest_source_id, ipo))
 
@@ -414,9 +414,9 @@ class DatasetHarvesterBase(HarvesterBase):
             harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
             harvest_object_error.save()
             log.error(msg)
-            return False, None
+            return None
         
-        return True, results['results'][0]
+        return results['results'][0]
 
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
@@ -444,8 +444,8 @@ class DatasetHarvesterBase(HarvesterBase):
 
                     #  check if parent is already harvested
                     parent_identifier = parent_pkg_id.replace('IPO:', '') 
-                    parent_is_harvested, parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
-                    if not parent_is_harvested:
+                    parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
+                    if not parent:
                         log.error('No parent for harvested dataset. IPO:'.format(parent_identifier))
                         return False
                     parent_pkg_id = parent['id']

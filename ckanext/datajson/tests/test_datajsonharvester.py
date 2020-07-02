@@ -10,13 +10,13 @@ from ckanext.datajson.harvester_datajson import DataJsonHarvester
 
 from factories import HarvestJobObj, HarvestSourceObj
 from nose.tools import (assert_equal, assert_false, assert_in, assert_raises,
-                        assert_true)
+                        assert_true, assert_is_none)
 
 try:
-    from ckan.tests.helpers import reset_db, call_action
+    from ckan.tests.helpers import reset_db, call_action, mock_action
     from ckan.tests.factories import Organization, Group
 except ImportError:
-    from ckan.new_tests.helpers import reset_db, call_action
+    from ckan.new_tests.helpers import reset_db, call_action, mock_action
     from ckan.new_tests.factories import Organization, Group
 
 log = logging.getLogger(__name__)
@@ -239,20 +239,42 @@ class TestDataJSONHarvester(object):
             harvest_object = harvest_model.HarvestObject.get(obj_id)
             content = json.loads(harvest_object.content)
             # get the dataset with this identifier only if is a parent in a collection
-            is_parent_and_is_harvested, dataset = self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object)
+            dataset = self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object)
             log.info('is_part_of_package_id {} {}'.format(content['identifier'], dataset))
 
             if content['identifier'] == 'OPM-ERround-0001':
                 assert_equal(dataset['title'], 'Employee Relations Roundtables')
             if content['identifier'] == 'OPM-ERround-0001-AWOL':
                 # this is not a parent
-                assert_false(is_parent_and_is_harvested)
+                assert_is_none(dataset)
             if content['identifier'] == 'OPM-ERround-0001-Retire':
                 # this is not a parent
-                assert_false(is_parent_and_is_harvested)
+                assert_is_none(dataset)
 
-        is_parent_and_is_harvested, dataset = self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
-        assert_false(is_parent_and_is_harvested)
+        dataset = self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
+        assert_is_none(dataset)
+
+    @mock_action('package_search')
+    def test_is_part_of_to_package_id_fail_no_results(self, mock_package_search):
+        """ unit test for is_part_of_to_package_id function """
+
+        mock_package_search.return_value = {'count': 0}
+        
+        harvester = DataJsonHarvester()
+        dataset = harvester.is_part_of_to_package_id('identifier', None)
+        assert mock_package_search.called
+        assert_is_none(dataset)
+    
+    @mock_action('package_search')
+    def test_is_part_of_to_package_id_one_result(self, mock_package_search):
+        """ unit test for is_part_of_to_package_id function """
+        
+        mock_package_search.return_value = {'count': 1, 'results': [{'name': 'dataset-1'}]}
+        
+        harvester = DataJsonHarvester()
+        dataset = harvester.is_part_of_to_package_id('identifier', None)
+        assert mock_package_search.called
+        assert_equal(dataset['name'], 'dataset-1')
 
     def test_datajson_reserverd_word_as_title(self):
         url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
