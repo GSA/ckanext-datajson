@@ -7,7 +7,7 @@ import mock_datajson_source
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
 from ckanext.datajson.harvester_datajson import DataJsonHarvester
-
+from mock import patch, Mock
 from factories import HarvestJobObj, HarvestSourceObj
 from nose.tools import (assert_equal, assert_false, assert_in, assert_raises,
                         assert_true, assert_is_none)
@@ -275,6 +275,33 @@ class TestDataJSONHarvester(object):
         dataset = harvester.is_part_of_to_package_id('identifier', None)
         assert mock_package_search.called
         assert_equal(dataset['name'], 'dataset-1')
+    
+    @mock_action('package_search')
+    @patch('ckanext.datajson.harvester_datajson.DataJsonHarvester.get_harvest_source_id', side_effect=lambda x: 'hsi-{}'.format(x))
+    def test_is_part_of_to_package_id_two_result(self, mock_package_search, mock_get_harvest_source_id):
+        """ unit test for is_part_of_to_package_id function 
+            Test for 2 parents with the same identifier. 
+            Just one belongs to the right harvest source """
+        
+        results = [
+            {'id': 'pkg-1',
+             'name': 'dataset-1', 
+             'extras': [{'key': 'identifier', 'value': 'custom-identifier'}]},
+            {'id': 'pkg-2',
+             'name': 'dataset-2',
+             'extras': [{'key': 'identifier', 'value': 'custom-identifier'}]}
+            ]
+        mock_package_search.return_value = {'count': 2, 'results': results}
+
+        harvest_source = Mock()
+        harvest_source.id = 'hsi-pkg-2'
+        harvest_object = Mock()
+        harvest_object.source = harvest_source
+        
+        harvester = DataJsonHarvester()
+        dataset = harvester.is_part_of_to_package_id('custom-identifier', harvest_object)
+        assert mock_package_search.called
+        assert_equal(dataset['name'], 'dataset-2')
 
     def test_datajson_reserverd_word_as_title(self):
         url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
