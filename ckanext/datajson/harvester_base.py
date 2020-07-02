@@ -388,7 +388,8 @@ class DatasetHarvesterBase(HarvesterBase):
             harvest_object_error.save()
             log.error(msg)
             return False, None
-        elif results['count'] > 1:  
+        
+        if results['count'] > 1:  
             # possible check identifier collision
             # check the URL of the source to validate
             datasets = results['results']
@@ -414,8 +415,8 @@ class DatasetHarvesterBase(HarvesterBase):
             harvest_object_error.save()
             log.error(msg)
             return False, None
-        else:
-            return True, results['results'][0]
+        
+        return True, results['results'][0]
 
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
