@@ -2,21 +2,22 @@ import json
 import logging
 from urllib2 import URLError
 
+import ckan.plugins as p
 import ckanext.harvest.model as harvest_model
 import mock_datajson_source
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
 from ckanext.datajson.harvester_datajson import DataJsonHarvester
-from mock import patch, Mock
 from factories import HarvestJobObj, HarvestSourceObj
-from nose.tools import (assert_equal, assert_false, assert_in, assert_raises,
-                        assert_true, assert_is_none)
+from mock import Mock, patch
+from nose.tools import (assert_equal, assert_false, assert_in, assert_is_none,
+                        assert_raises, assert_true)
 
 try:
     from ckan.tests.helpers import reset_db, call_action, mock_action
     from ckan.tests.factories import Organization, Group
 except ImportError:
-    from ckan.new_tests.helpers import reset_db, call_action, mock_action
+    from ckan.new_tests.helpers import reset_db, call_action
     from ckan.new_tests.factories import Organization, Group
 
 log = logging.getLogger(__name__)
@@ -254,10 +255,45 @@ class TestDataJSONHarvester(object):
         dataset = self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
         assert_is_none(dataset)
 
+    def test_datajson_reserverd_word_as_title(self):
+        url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
+        self.run_source(url=url)
+        errors = self.errors
+        expected_error_stage = "Import"
+        assert_equal(errors[0].stage, expected_error_stage)
+        expected_error_message = "title: Search. That name cannot be used."
+        assert_equal(errors[0].message, expected_error_message)
+
+    def test_datajson_large_spatial(self):
+        url = 'http://127.0.0.1:%s/error-large-spatial' % mock_datajson_source.PORT
+        self.run_source(url=url)
+        errors = self.errors
+        expected_error_stage = "Import"
+        assert_equal(errors[0].stage, expected_error_stage)
+        expected_error_message = "spatial: Maximum allowed size is 32766. Actual size is 309643."
+        assert_equal(errors[0].message, expected_error_message)
+
+    def test_datajson_null_spatial(self):
+        url = 'http://127.0.0.1:%s/null-spatial' % mock_datajson_source.PORT
+        datasets = self.run_source(url=url)
+        dataset = datasets[0]
+        expected_title = "Sample Title NUll Spatial"
+        assert_equal(dataset.title, expected_title)
+
+    def test_datason_404(self):
+        url = 'http://127.0.0.1:%s/404' % mock_datajson_source.PORT
+        with assert_raises(URLError):
+            self.run_source(url=url)
+
+    def test_datason_500(self):
+        url = 'http://127.0.0.1:%s/500' % mock_datajson_source.PORT
+        with assert_raises(URLError):
+            self.run_source(url=url)
+
+if p.toolkit.check_ckan_version(min_version='2.8'):
     @mock_action('package_search')
     def test_is_part_of_to_package_id_fail_no_results(self, mock_package_search):
         """ unit test for is_part_of_to_package_id function """
-
         mock_package_search.return_value = {'count': 0}
         
         harvester = DataJsonHarvester()
@@ -302,38 +338,3 @@ class TestDataJSONHarvester(object):
         dataset = harvester.is_part_of_to_package_id('custom-identifier', harvest_object)
         assert mock_package_search.called
         assert_equal(dataset['name'], 'dataset-2')
-
-    def test_datajson_reserverd_word_as_title(self):
-        url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
-        self.run_source(url=url)
-        errors = self.errors
-        expected_error_stage = "Import"
-        assert_equal(errors[0].stage, expected_error_stage)
-        expected_error_message = "title: Search. That name cannot be used."
-        assert_equal(errors[0].message, expected_error_message)
-
-    def test_datajson_large_spatial(self):
-        url = 'http://127.0.0.1:%s/error-large-spatial' % mock_datajson_source.PORT
-        self.run_source(url=url)
-        errors = self.errors
-        expected_error_stage = "Import"
-        assert_equal(errors[0].stage, expected_error_stage)
-        expected_error_message = "spatial: Maximum allowed size is 32766. Actual size is 309643."
-        assert_equal(errors[0].message, expected_error_message)
-
-    def test_datajson_null_spatial(self):
-        url = 'http://127.0.0.1:%s/null-spatial' % mock_datajson_source.PORT
-        datasets = self.run_source(url=url)
-        dataset = datasets[0]
-        expected_title = "Sample Title NUll Spatial"
-        assert_equal(dataset.title, expected_title)
-
-    def test_datason_404(self):
-        url = 'http://127.0.0.1:%s/404' % mock_datajson_source.PORT
-        with assert_raises(URLError):
-            self.run_source(url=url)
-
-    def test_datason_500(self):
-        url = 'http://127.0.0.1:%s/500' % mock_datajson_source.PORT
-        with assert_raises(URLError):
-            self.run_source(url=url)
