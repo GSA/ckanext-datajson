@@ -126,7 +126,7 @@ class TestDataJSONHarvester(object):
     def test_datajson_collection(self):
         """ harvest from a source with a parent in the second place
             We expect the gather stage to re-order to the forst place """
-        url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
         obj_ids = self.run_gather(url=url)
 
         identifiers = []
@@ -144,7 +144,7 @@ class TestDataJSONHarvester(object):
             When we harvest a child the parent must exists
             data.json from: https://www.opm.gov/data.json """
 
-        url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
         obj_ids = self.run_gather(url=url)
         assert_equal(len(obj_ids), 3)
         self.run_fetch()
@@ -178,7 +178,7 @@ class TestDataJSONHarvester(object):
         assert_equal(parent_counter, 1)
     
     def get_datasets_from_2_collection(self):
-        url = 'http://127.0.0.1:%s/collections2' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/collection-2-parent-4-children.data.json' % mock_datajson_source.PORT
         obj_ids = self.run_gather(url=url)
         assert_equal(len(obj_ids), 6)
         self.run_fetch()
@@ -230,7 +230,7 @@ class TestDataJSONHarvester(object):
                 assert_equal(parent.title, 'Employee Relations Roundtables 2') 
 
     def test_datajson_is_part_of_package_id(self):
-        url = 'http://127.0.0.1:%s/collections' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
         obj_ids = self.run_gather(url=url)
         self.run_fetch()
         self.run_import()
