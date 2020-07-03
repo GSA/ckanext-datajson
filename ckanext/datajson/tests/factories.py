@@ -31,6 +31,9 @@ class HarvestSource(factory.Factory):
             source_dict = toolkit.get_action('harvest_source_create')(
                 context, kwargs)
         if cls._return_type == 'dict':
+            if source_dict.get('extras', None) is None:
+                extras = [{'key': 'test key', 'value': 'test value'}]
+                source_dict['extras'] = extras
             return source_dict
         else:
             return cls.FACTORY_FOR.get(source_dict['id'])

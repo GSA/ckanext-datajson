@@ -6,9 +6,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: where am I
-          command: pwd && ls -la
-      - run:
           name: Install Docker Compose
           command: |
             set -x
@@ -42,9 +39,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: where am I
-          command: pwd && ls -la
-      - run:
           name: install
           command: bin/travis-build.bash
       - run:
@@ -58,9 +52,6 @@ jobs:
       CKANVERSION=2.3
     steps:
       - checkout
-      - run:
-          name: where am I
-          command: pwd && ls -la
       - run:
           name: install
           command: bin/travis-build.bash
@@ -77,9 +68,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: where am I
-          command: pwd && ls -la
-      - run:
           name: install
           command: bin/travis-build.bash
       - run:
@@ -94,9 +82,6 @@ jobs:
       CKANVERSION=datagov
     steps:
       - checkout
-      - run:
-          name: where am I
-          command: pwd && ls -la
       - run:
           name: install
           command: bin/travis-build.bash

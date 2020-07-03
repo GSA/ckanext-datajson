@@ -6,7 +6,7 @@ echo "This is travis-build.bash..."
 echo "-----------------------------------------------------------------"
 echo "Installing the packages that CKAN requires..."
 sudo apt-get update -qq
-sudo apt-get install solr-jetty libcommons-fileupload-java libpq-dev postgresql postgresql-contrib
+sudo apt-get install solr-jetty libcommons-fileupload-java libpq-dev postgresql postgresql-contrib redis-server
 
 echo "-----------------------------------------------------------------"
 echo "Installing CKAN and its dependencies..."
@@ -78,9 +78,23 @@ paster db init -c test-core.ini
 cd ..
 echo "-----------------------------------------------------------------"
 echo "Installing Harvester"
-git clone https://github.com/ckan/ckanext-harvest
+
+git clone https://github.com/GSA/ckanext-harvest
 cd ckanext-harvest
-git checkout master
+	
+if [ $CKANVERSION == '2.8' ]
+then
+	git checkout datagov-catalog
+elif [ $CKANVERSION == '2.3' ]
+then
+	git checkout datagov
+elif [ $CKANVERSION == 'inventory' ]
+then
+	git checkout datagov
+elif [ $CKANVERSION == 'datagov' ]
+then
+	git checkout datagov
+fi
 
 python setup.py develop
 pip install -r pip-requirements.txt

@@ -12,7 +12,7 @@ from ckan.lib.navl.validators import ignore_empty
 from ckanext.harvest.model import HarvestJob, HarvestObject, HarvestGatherError, \
                                     HarvestObjectError, HarvestObjectExtra
 from ckanext.harvest.harvesters.base import HarvesterBase
-
+from ckanext.datajson.exceptions import ParentNotHarvestedException
 import uuid, datetime, hashlib, urllib2, json, yaml, json, os
 
 from jsonschema.validators import Draft4Validator
@@ -192,6 +192,9 @@ class DatasetHarvesterBase(HarvesterBase):
                 and identifier not in existing_parents.keys())
 
         source = harvest_job.source
+        source_config = json.loads(source.config or '{}')
+        # run status: None, or parents_run, or children_run?
+        run_status = source_config.get('datajson_collection')
         
         if parent_identifiers:
             for parent in parent_identifiers & child_identifiers:
@@ -201,6 +204,39 @@ class DatasetHarvesterBase(HarvesterBase):
 
             new_parents = set(identifier for identifier in parent_identifiers \
                 if identifier not in existing_parents.keys())
+            
+            if new_parents:
+                if not run_status:
+                    # fresh start
+                    run_status = 'parents_run'
+                    source_config['datajson_collection'] = run_status
+                    source.config = json.dumps(source_config)
+                    source.save()
+                elif run_status == 'children_run':
+                    # it means new parents are tried and failed.
+                    # but skip some which have previously reported with
+                    # parent_identifiers & child_identifiers
+                    for parent in new_parents - \
+                        (parent_identifiers & child_identifiers):
+                        self._save_gather_error("Collection identifier '%s' \
+                            not found. Records which are part of this \
+                            collection will not be harvested." \
+                            % parent, harvest_job)
+                else:
+                    # run_status was parents_run, and did not finish.
+                    # something wrong but not sure what happened.
+                    # let's leave it as it is, let it run one more time.
+                    pass
+            else:
+                # all parents are already in place. run it as usual.
+                run_status = None
+            
+        elif run_status:
+            # need to clear run_status
+            run_status = None
+            source_config['datajson_collection'] = run_status
+            source.config = json.dumps(source_config)
+            source.save()
                     
         # Create HarvestObjects for any records in the remote catalog.
             
@@ -223,6 +259,23 @@ class DatasetHarvesterBase(HarvesterBase):
                     matched_filters = False
             if not matched_filters:
                 continue
+
+            if p.toolkit.check_ckan_version(max_version='2.7.99'):
+                # Skip children datasets from new parents. This will run in a second job
+                if parent_identifiers and new_parents \
+                    and dataset['identifier'] not in parent_identifiers \
+                    and dataset.get('isPartOf') in new_parents:
+                    if run_status == 'parents_run':
+                        # skip those whose parents still need to run.
+                        continue
+                    else:
+                        # which is 'children_run'.
+                        # error out since parents got issues.
+                        self._save_gather_error(
+                            "Record with identifier '%s': isPartOf '%s' points to \
+                            an erroneous record." % (dataset['identifier'],
+                                dataset.get('isPartOf')), harvest_job)
+                        continue
 
             # Some source contains duplicate identifiers. skip all except the first one
             if dataset['identifier'] in unique_datasets:
@@ -373,23 +426,25 @@ class DatasetHarvesterBase(HarvesterBase):
 
     def is_part_of_to_package_id(self, ipo, harvest_object):
         """ Get an identifier from external source using isPartOf
-            and return a tuple:
-                is_harvested: the parent is already harvested and we have its package_id
-                dataset: the parent dataset using the identifier (IPO:isPartOf)
+            and returns the parent dataset or raises an ParentNotHarvestedException.
             Only search for datasets that are the parent of a collection.
             """
         ps = p.toolkit.get_action('package_search')
         query = 'extras_identifier:{} AND extras_collection_metadata:true'.format(ipo)
         results = ps(self.context(), {"fq": query})
+        log.info('Package search results {}'.format(results))
         
         if results['count'] == 0:
             msg = 'Parent identifier not found: "{}"'.format(ipo)
-            harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
-            harvest_object_error.save()
+            try:
+                harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
+                harvest_object_error.save()
+            except:
+                pass
             log.error(msg)
-            return None
+            raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
         
-        if results['count'] > 1:  
+        if results['count'] > 0:  # event if we have only one we need to be sure is the parent I need
             # possible check identifier collision
             # check the URL of the source to validate
             datasets = results['results']
@@ -411,13 +466,14 @@ class DatasetHarvesterBase(HarvesterBase):
                     log.info('{} not found at {} for {}'.format(harvest_source.id, dataset_harvest_source_id, ipo))
 
             msg = 'Unable to identify parent for: "{}" ({})'.format(ipo, results['count'])
-            harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
-            harvest_object_error.save()
+            try:
+                harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
+                harvest_object_error.save()
+            except:
+                pass
             log.error(msg)
-            return None
+            raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
         
-        return results['results'][0]
-
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
         
@@ -445,13 +501,27 @@ class DatasetHarvesterBase(HarvesterBase):
                     #  check if parent is already harvested
                     parent_identifier = parent_pkg_id.replace('IPO:', '') 
                     parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
-                    if not parent:
-                        log.error('No parent for harvested dataset. IPO:'.format(parent_identifier))
-                        return False
                     parent_pkg_id = parent['id']
 
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
+
+            # if this dataset is part of collection, we need to check if
+            # parent dataset exist or not. we dont support any hierarchy
+            # in this, so the check does not apply to those of is_collection
+            if parent_pkg_id and not is_collection:
+                parent_pkg = None
+                try:
+                    parent_pkg = get_action('package_show')(self.context(),
+                        { "id": parent_pkg_id })
+                except:
+                    pass
+                if not parent_pkg:
+                    parent_check_message = "isPartOf identifer '%s' not found." \
+                        % dataset.get('isPartOf')
+                    self._save_object_error(parent_check_message, harvest_object,
+                        'Import')
+                    return None
 
         # do title check here
         # https://github.com/GSA/datagov-deploy/issues/953
