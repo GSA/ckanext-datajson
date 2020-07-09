@@ -434,18 +434,6 @@ class DatasetHarvesterBase(HarvesterBase):
         results = ps(self.context(), {"fq": query})
         log.info('Package search results {}'.format(results))
         
-        if results['count'] == 0:
-            msg = 'Parent identifier not found: "{}"'.format(ipo)
-            try:
-                harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
-                harvest_object_error.save()
-            except:
-                pass
-            log.error(msg)
-            harvest_object.state = "ERROR"
-            harvest_object.save()
-            raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
-        
         if results['count'] > 0:  # event if we have only one we need to be sure is the parent I need
             # possible check identifier collision
             # check the URL of the source to validate
@@ -467,16 +455,17 @@ class DatasetHarvesterBase(HarvesterBase):
                 else:
                     log.info('{} not found at {} for {}'.format(harvest_source.id, dataset_harvest_source_id, ipo))
 
-            msg = 'Unable to identify parent for: "{}" ({})'.format(ipo, results['count'])
-            try:
-                harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
-                harvest_object_error.save()
-            except:
-                pass
-            log.error(msg)
+        # we have 0 o bad results
+        msg = 'Parent identifier not found: "{}"'.format(ipo)
+        log.error(msg)
+        try:
+            harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
+            harvest_object_error.save()
             harvest_object.state = "ERROR"
             harvest_object.save()
-            raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
+        except:
+            pass
+        raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
         
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
