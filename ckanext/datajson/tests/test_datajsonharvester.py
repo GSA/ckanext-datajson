@@ -5,6 +5,7 @@ from urllib2 import URLError
 
 import ckan.plugins as p
 import ckanext.harvest.model as harvest_model
+import ckanext.harvest.queue as queue
 import mock_datajson_source
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
@@ -75,10 +76,18 @@ class TestDataJSONHarvester(object):
             if len(harvest_object.errors) > 0:
                 self.errors = harvest_object.errors
 
-    def run_import(self):
+    def run_import(self, objects=None):
         # import stage
         datasets = []
-        for harvest_object in self.harvest_objects:
+        
+        # allow run just some objects
+        if objects is None:
+            # default is all objects in the right order
+            objects = self.harvest_objects
+        else:
+            log.info('Import custom list {}'.format(objects))
+        
+        for harvest_object in objects:
             log.info('IMPORTING %s' % harvest_object.id)
             result = self.harvester.import_stage(harvest_object)
             
@@ -358,7 +367,56 @@ class TestDataJSONHarvester(object):
             
         with assert_raises(ParentNotHarvestedException):
             self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
+    
+    def test_raise_child_error_and_retry(self):
+        """ if a harvest job for a child fails because 
+            parent still not exists we need to ensure
+            this job will be retried. 
+            This test emulate te case we harvest children first
+            (e.g. if we have several active queues)"""
+
+        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
+        self.run_gather(url=url)
         
+        # consumer = queue.get_gather_consumer()
+        consumer_fetch = queue.get_fetch_consumer()
+        # consumer.queue_purge(queue=queue.get_gather_queue_name())
+        consumer_fetch.queue_purge(queue=queue.get_fetch_queue_name())
+
+        # each harvest object have a "retry_times" property
+        for ho in self.harvest_objects:
+            ho.retry_times = 0
+
+        class FakeMethod(object):
+            ''' This is to act like the method returned by AMQP'''
+            def __init__(self, message):
+                self.delivery_tag = message
+
+        # run the queue in wrong order
+
+        # first a child to get an error
+        r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
+        r0 = FakeMethod(r2)
+        with assert_raises(ParentNotHarvestedException):
+            queue.fetch_callback(consumer_fetch, r0, None, r2)
+        assert_equal(self.harvest_objects[1].retry_times, 1)
+        assert_equal(self.harvest_objects[1].state, "ERROR")
+
+        # run the parent later, like in a different queue
+        r2 = json.dumps({"harvest_object_id": self.harvest_objects[0].id})
+        r0 = FakeMethod(r2)
+        queue.fetch_callback(consumer_fetch, r0, None, r2)
+        assert_equal(self.harvest_objects[0].retry_times, 1)
+        assert_equal(self.harvest_objects[0].state, "COMPLETE")
+        
+        # retry the child and validate the retry counter
+        r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
+        r0 = FakeMethod(r2)
+        queue.fetch_callback(consumer_fetch, r0, None, r2)
+        self.harvest_objects[1] = harvest_model.HarvestObject.get(self.harvest_objects[1].id)  # refresh
+        assert_equal(self.harvest_objects[1].retry_times, 2)
+        assert_equal(self.harvest_objects[1].state, "COMPLETE")
+
     def test_datajson_reserverd_word_as_title(self):
         url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
         self.run_source(url=url)

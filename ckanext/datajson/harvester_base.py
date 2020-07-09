@@ -442,6 +442,8 @@ class DatasetHarvesterBase(HarvesterBase):
             except:
                 pass
             log.error(msg)
+            harvest_object.state = "ERROR"
+            harvest_object.save()
             raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
         
         if results['count'] > 0:  # event if we have only one we need to be sure is the parent I need
@@ -472,6 +474,8 @@ class DatasetHarvesterBase(HarvesterBase):
             except:
                 pass
             log.error(msg)
+            harvest_object.state = "ERROR"
+            harvest_object.save()
             raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
         
     def import_stage(self, harvest_object):
