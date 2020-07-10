@@ -373,7 +373,11 @@ class TestDataJSONHarvester(object):
             parent still not exists we need to ensure
             this job will be retried. 
             This test emulate te case we harvest children first
-            (e.g. if we have several active queues)"""
+            (e.g. if we have several active queues).
+            Just for CKAN 2.8 env"""
+        
+        if p.toolkit.check_ckan_version(max_version='2.7.99'):
+            return 
 
         url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
         self.run_gather(url=url)
