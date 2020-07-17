@@ -31,7 +31,8 @@ class TestDataJSONHarvester(object):
     @classmethod
     def setup_class(cls):
         log.info('Starting mock http server')
-        mock_datajson_source.serve()
+        cls.mock_port = 8961
+        mock_datajson_source.serve(cls.mock_port)
 
     @classmethod
     def setup(cls):
@@ -120,7 +121,7 @@ class TestDataJSONHarvester(object):
         return datasets
 
     def test_datason_arm(self):
-        url = 'http://127.0.0.1:%s/arm' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/arm' % self.mock_port
         datasets = self.run_source(url=url)
         dataset = datasets[0]
         # assert_equal(first element on list
@@ -131,7 +132,7 @@ class TestDataJSONHarvester(object):
         assert_equal(len(dataset.resources), 1)
 
     def test_datason_usda(self):
-        url = 'http://127.0.0.1:%s/usda' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/usda' % self.mock_port
         datasets = self.run_source(url=url)
         dataset = datasets[0]
         expected_title = "Department of Agriculture Congressional Logs for Fiscal Year 2014"
@@ -140,197 +141,17 @@ class TestDataJSONHarvester(object):
         assert_equal(len(dataset.resources), 1)
         assert_in(munge_title_to_name("Congressional Logs"), tags)
 
-    def test_datajson_collection(self):
-        """ harvest from a source with a parent in the second place
-            We expect the gather stage to re-order to the forst place """
-        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
-        obj_ids = self.run_gather(url=url)
-
-        identifiers = []
-        for obj_id in obj_ids:
-            harvest_object = harvest_model.HarvestObject.get(obj_id)
-            content = json.loads(harvest_object.content)
-            identifiers.append(content['identifier'])
-
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            expected_obj_ids = ['OPM-ERround-0001']
-        else:
-            # We always expect the parent to be the first on the list
-            expected_obj_ids = ['OPM-ERround-0001', 'OPM-ERround-0001-AWOL', 'OPM-ERround-0001-Retire']
-        assert_equal(expected_obj_ids, identifiers)
-    
-    def test_harvesting_parent_child_collections(self):
-        """ Test that parent are beeing harvested first.
-            When we harvest a child the parent must exists
-            data.json from: https://www.opm.gov/data.json """
-
-        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
-        obj_ids = self.run_gather(url=url)
-
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            assert_equal(len(obj_ids), 1)
-        else:
-            assert_equal(len(obj_ids), 3)
-
-        self.run_fetch()
-        datasets = self.run_import()
-
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            assert_equal(len(datasets), 1)
-            titles = ['Employee Relations Roundtables']
-        else:
-            assert_equal(len(datasets), 3)
-            titles = ['Linking Employee Relations and Retirement',
-                    'Addressing AWOL',
-                    'Employee Relations Roundtables']
-
-        parent_counter = 0
-        child_counter = 0
-        
-        for dataset in datasets:
-            assert dataset.title in titles
-            
-            is_parent = dataset.extras.get('collection_metadata', 'false').lower() == 'true'
-            is_child = dataset.extras.get('collection_package_id', None) is not None
-
-            log.info('Harvested dataset {} {} {}'.format(dataset.title, is_parent, is_child))
-
-            if dataset.title == 'Employee Relations Roundtables':
-                assert_equal(is_parent, True)
-                assert_equal(is_child, False)
-                parent_counter += 1
-            else:
-                assert_equal(is_child, True)
-                assert_equal(is_parent, False)
-                child_counter += 1
-
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            assert_equal(child_counter, 0)
-        else:
-            assert_equal(child_counter, 2)
-        assert_equal(parent_counter, 1)
-    
     def get_datasets_from_2_collection(self):
-        url = 'http://127.0.0.1:%s/collection-2-parent-4-children.data.json' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/collection-2-parent-4-children.data.json' % self.mock_port
         obj_ids = self.run_gather(url=url)
 
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            assert_equal(len(obj_ids), 2)
-        else:
-            assert_equal(len(obj_ids), 6)
+        assert_equal(len(obj_ids), 6)
 
         self.run_fetch()
         datasets = self.run_import()
-        
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            assert_equal(len(datasets), 2)
-        else:
-            assert_equal(len(datasets), 6)
-        
+        assert_equal(len(datasets), 6)
         return datasets
-
-    @patch('ckanext.harvest.logic.action.update.harvest_source_show')
-    def test_new_job_created(self, mock_harvest_source_show):
-        """ with CKAN 2.3 we divide the harvest job for collection in two steps:
-            (one for parents and a second one for children).
-            After finish tha parent job a new job is created for children
-            """
-        def ps(context, data):
-            return {
-                    u'id': self.source.id,
-                    u'title': self.source.title, 
-                    u'state': u'active',
-                    u'type': u'harvest', 
-                    u'source_type': self.source.type, 
-                    u'active': False,
-                    u'name': u'test_source_0',
-                    u'url': self.source.url,
-                    u'extras': []
-                }
-
-        # just for CKAN 2.3
-        mock_harvest_source_show.side_effect = ps
-
-        datasets = self.get_datasets_from_2_collection()
         
-        # in CKAN 2.3 we expect a new job for this source and also a change in the source config 
-        
-        context = {'model': model, 'user': self.user['name'], 'session':model.Session}
-
-        # fake job status before final RUN command.
-        self.job.status = u'Running'
-        self.job.gather_finished = datetime.utcnow()
-        self.job.save()
-
-        # mark finished and do the after job tasks (in CKAN 2.3 is to create a new job for children)
-        p.toolkit.get_action('harvest_jobs_run')(context, {'source_id': self.source.id})
-        
-        jobs = harvest_model.HarvestJob.filter(source=self.source).all()
-        source_config = json.loads(self.source.config or '{}')
-        
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            assert_equal(len(jobs), 2)
-            # Old harvester go from parents_run to children_run (a second job for children)
-            assert_equal(source_config.get('datajson_collection'), 'children_run')
-        else:
-            assert_equal(len(jobs), 1)
-            # New harvester never go from parents_run to children_run
-            assert_equal(source_config.get('datajson_collection', ''), 'parents_run')
-            assert_equal(jobs[0].status, 'Finished')
-
-        return datasets
-
-    def test_datasets_count(self):
-        """ test we harvest the right amount of datasets """
-
-        datasets = self.get_datasets_from_2_collection()
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            assert_equal(len(datasets), 2)
-        else:
-            assert_equal(len(datasets), 6)
-    
-    def test_parent_child_counts(self):
-        """ Test count for parent and children """
-        
-        datasets = self.get_datasets_from_2_collection()
-        
-        parent_counter = 0
-        child_counter = 0
-        
-        for dataset in datasets:
-            
-            is_parent = dataset.extras.get('collection_metadata', 'false').lower() == 'true'
-            parent_package_id = dataset.extras.get('collection_package_id', None)
-            is_child = parent_package_id is not None
-
-            if is_parent:
-                parent_counter += 1
-            elif is_child:
-                child_counter += 1
-
-        assert_equal(parent_counter, 2)
-
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            # at CKAN 2.3 with GSA ckanext-harvest fork we expect just parents
-            # after "parents_run" a new job will be raised for children
-            assert_equal(child_counter, 0)
-        else:
-            assert_equal(child_counter, 4)
-
     def test_harvesting_parent_child_2_collections(self):
         """ Test that we have the right parents in each case """
         
@@ -348,7 +169,7 @@ class TestDataJSONHarvester(object):
                 assert_equal(parent.title, 'Employee Relations Roundtables 2') 
 
     def test_datajson_is_part_of_package_id(self):
-        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % self.mock_port
         obj_ids = self.run_gather(url=url)
         self.run_fetch()
         self.run_import()
@@ -367,62 +188,9 @@ class TestDataJSONHarvester(object):
             
         with assert_raises(ParentNotHarvestedException):
             self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
-    
-    def test_raise_child_error_and_retry(self):
-        """ if a harvest job for a child fails because 
-            parent still not exists we need to ensure
-            this job will be retried. 
-            This test emulate te case we harvest children first
-            (e.g. if we have several active queues).
-            Just for CKAN 2.8 env"""
-        
-        if p.toolkit.check_ckan_version(max_version='2.7.99'):
-            return 
-
-        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % mock_datajson_source.PORT
-        self.run_gather(url=url)
-        
-        # consumer = queue.get_gather_consumer()
-        consumer_fetch = queue.get_fetch_consumer()
-        # consumer.queue_purge(queue=queue.get_gather_queue_name())
-        consumer_fetch.queue_purge(queue=queue.get_fetch_queue_name())
-
-        # each harvest object have a "retry_times" property
-        for ho in self.harvest_objects:
-            ho.retry_times = 0
-
-        class FakeMethod(object):
-            ''' This is to act like the method returned by AMQP'''
-            def __init__(self, message):
-                self.delivery_tag = message
-
-        # run the queue in wrong order
-
-        # first a child to get an error
-        r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
-        r0 = FakeMethod(r2)
-        with assert_raises(ParentNotHarvestedException):
-            queue.fetch_callback(consumer_fetch, r0, None, r2)
-        assert_equal(self.harvest_objects[1].retry_times, 1)
-        assert_equal(self.harvest_objects[1].state, "ERROR")
-
-        # run the parent later, like in a different queue
-        r2 = json.dumps({"harvest_object_id": self.harvest_objects[0].id})
-        r0 = FakeMethod(r2)
-        queue.fetch_callback(consumer_fetch, r0, None, r2)
-        assert_equal(self.harvest_objects[0].retry_times, 1)
-        assert_equal(self.harvest_objects[0].state, "COMPLETE")
-        
-        # retry the child and validate the retry counter
-        r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
-        r0 = FakeMethod(r2)
-        queue.fetch_callback(consumer_fetch, r0, None, r2)
-        self.harvest_objects[1] = harvest_model.HarvestObject.get(self.harvest_objects[1].id)  # refresh
-        assert_equal(self.harvest_objects[1].retry_times, 2)
-        assert_equal(self.harvest_objects[1].state, "COMPLETE")
 
     def test_datajson_reserverd_word_as_title(self):
-        url = 'http://127.0.0.1:%s/error-reserved-title' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/error-reserved-title' % self.mock_port
         self.run_source(url=url)
         errors = self.errors
         expected_error_stage = "Import"
@@ -431,7 +199,7 @@ class TestDataJSONHarvester(object):
         assert_equal(errors[0].message, expected_error_message)
 
     def test_datajson_large_spatial(self):
-        url = 'http://127.0.0.1:%s/error-large-spatial' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/error-large-spatial' % self.mock_port
         self.run_source(url=url)
         errors = self.errors
         expected_error_stage = "Import"
@@ -440,19 +208,19 @@ class TestDataJSONHarvester(object):
         assert_equal(errors[0].message, expected_error_message)
 
     def test_datajson_null_spatial(self):
-        url = 'http://127.0.0.1:%s/null-spatial' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/null-spatial' % self.mock_port
         datasets = self.run_source(url=url)
         dataset = datasets[0]
         expected_title = "Sample Title NUll Spatial"
         assert_equal(dataset.title, expected_title)
 
     def test_datason_404(self):
-        url = 'http://127.0.0.1:%s/404' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/404' % self.mock_port
         with assert_raises(URLError):
             self.run_source(url=url)
 
     def test_datason_500(self):
-        url = 'http://127.0.0.1:%s/500' % mock_datajson_source.PORT
+        url = 'http://127.0.0.1:%s/500' % self.mock_port
         with assert_raises(URLError):
             self.run_source(url=url)
 

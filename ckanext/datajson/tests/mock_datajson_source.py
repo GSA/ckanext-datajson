@@ -12,8 +12,6 @@ from ckanext import datajson
 
 log = logging.getLogger("harvester")
 
-PORT = 8998
-
 class MockDataJSONHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def do_GET(self):
         log.info('GET mock at: {}'.format(self.path))
@@ -77,7 +75,7 @@ class MockDataJSONHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         self.wfile.close()
 
 
-def serve(port=PORT):
+def serve(port=8998):
     '''Runs a CKAN-alike app (over HTTP) that is used for harvesting tests'''
 
     # Choose the directory to serve files from
@@ -87,10 +85,9 @@ def serve(port=PORT):
     class TestServer(SocketServer.TCPServer):
         allow_reuse_address = True
 
-    httpd = TestServer(("", PORT), MockDataJSONHandler)
+    httpd = TestServer(("", port), MockDataJSONHandler)
 
-    info = 'Serving test HTTP server at port {}'.format(PORT)
-    print(info)
+    info = 'Serving test HTTP server at port {}'.format(port)
     log.info(info)
 
     httpd_thread = Thread(target=httpd.serve_forever)
