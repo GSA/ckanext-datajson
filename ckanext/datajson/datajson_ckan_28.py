@@ -587,7 +587,6 @@ class DatasetHarvesterBase(HarvesterBase):
             mapping_processed = MAPPING_V1_1
             skip_processed = SKIP_V1_1
 
-        log.info('LALA09 \n\t{}\n\t{}\n\t{}'.format(validator_schema, schema_version, dataset_processed))
         validate_message = self._validate_dataset(validator_schema,
             schema_version, dataset_processed)
         if validate_message:

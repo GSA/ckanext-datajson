@@ -143,13 +143,9 @@ class TestDataJSONHarvester(object):
 
     def get_datasets_from_2_collection(self):
         url = 'http://127.0.0.1:%s/collection-2-parent-4-children.data.json' % self.mock_port
-        obj_ids = self.run_gather(url=url)
-
-        assert_equal(len(obj_ids), 6)
-
+        self.run_gather(url=url)
         self.run_fetch()
         datasets = self.run_import()
-        assert_equal(len(datasets), 6)
         return datasets
         
     def test_harvesting_parent_child_2_collections(self):
