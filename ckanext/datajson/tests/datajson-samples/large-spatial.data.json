@@ -1,8 +1,8 @@
 {
   "@type": "dcat:Catalog",
-  "describedBy": "https://project-open-data.cio.gov/v1.1/schema/catalog.json",
-  "conformsTo": "https://project-open-data.cio.gov/v1.1/schema",
-  "@context": "https://project-open-data.cio.gov/v1.1/schema/catalog.jsonld",
+  "describedBy": "https://resources.data.gov/schemas/dcat-us/v1.1/schema/catalog.json",
+  "conformsTo": "https://resources.data.gov/schemas/dcat-us/v1.1/schema",
+  "@context": "https://resources.data.gov/schemas/dcat-us/v1.1/schema/catalog.jsonld",
   "dataset": [
     {
       "identifier": "bad-02",

@@ -50,6 +50,16 @@ class DataJsonHarvester(DatasetHarvesterBase):
             catalog_values = datasets.copy()
             datasets = catalog_values.pop("dataset", [])
 
+            # hotfix to deal with an unexpected domain redirection
+            for k, v in catalog_values.items():
+                catalog_values[k] = v.replace("https://project-open-data.cio.gov/v1.1/schema", "https://resources.data.gov/schemas/dcat-us/v1.1/schema")
+    
+        for dataset in datasets:
+            if dataset.get("license") == "https://project-open-data.cio.gov/unknown-license":
+                dataset["license"] = "https://github.com/project-open-data/project-open-data.github.io/blob/master/unknown-license.md"
+            elif dataset.get("license") == "https://project-open-data.cio.gov/open-licenses":
+                dataset["license"] = "https://resources.data.gov/open-licenses/"
+        
         return (datasets, catalog_values)
         
     def set_dataset_info(self, pkg, dataset, dataset_defaults, schema_version):

@@ -17,6 +17,7 @@ import uuid, datetime, hashlib, urllib2, json, yaml, json, os
 
 from jsonschema.validators import Draft4Validator
 from jsonschema import FormatChecker
+from jsonschema.exceptions import RefResolutionError
 
 from sqlalchemy.exc import IntegrityError
 
@@ -131,7 +132,7 @@ class DatasetHarvesterBase(HarvesterBase):
         if len(source_datasets) == 0: return []
 
         DATAJSON_SCHEMA = {
-            "https://project-open-data.cio.gov/v1.1/schema": '1.1',
+            "https://resources.data.gov/schemas/dcat-us/v1.1/schema": '1.1',
             }
 
         # schema version is default 1.0, or a valid one (1.1, ...)
@@ -369,13 +370,26 @@ class DatasetHarvesterBase(HarvesterBase):
         with open(os.path.join(
             os.path.dirname(__file__), file_path)) as json_file:
             schema = json.load(json_file)
+            # fix the schema
 
         msg = ";"
         errors = Draft4Validator(schema, format_checker=FormatChecker()).iter_errors(dataset)
         count = 0
-        for error in errors:
+        while True:
+            try:
+                error = next(errors)
+            except StopIteration:
+                # there is no more errors
+                break
+            except RefResolutionError:
+                # TODO, this errors is related to https://github.com/GSA/datagov-deploy/issues/1895 
+                # the external resources (e.g. https://resources.data.gov/schemas/dcat-us/v1.1/schema/organization.json)
+                # uses references to nonexistent project-open-data.cio.gov links
+                # we can fix this resources or create new ones
+                continue
             count += 1
             msg = msg + " ### ERROR #" + str(count) + ": " + self._validate_readable_msg(error) + "; "
+
         msg = msg.strip("; ")
         if msg:
             id = "Identifier: " + (dataset.get("identifier") if dataset.get("identifier") else "Unknown")

@@ -1,9 +1,9 @@
 {
   "validation_enabled": false,
   "catalog_headers": {
-    "conformsTo": "https://project-open-data.cio.gov/v1.1/schema",
-    "describedBy": "https://project-open-data.cio.gov/v1.1/schema/catalog.json",
-    "@context": "https://project-open-data.cio.gov/v1.1/schema/catalog.jsonld",
+    "conformsTo": "https://resources.data.gov/schemas/dcat-us/v1.1/schema",
+    "describedBy": "https://resources.data.gov/schemas/dcat-us/v1.1/schema/catalog.json",
+    "@context": "https://resources.data.gov/schemas/dcat-us/v1.1/schema/catalog.jsonld",
     "@type": "dcat:Catalog"
   },
   "dataset_fields_map": {
