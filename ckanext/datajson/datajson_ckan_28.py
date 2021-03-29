@@ -729,9 +729,7 @@ class DatasetHarvesterBase(HarvesterBase):
                 # sometimes one fetch worker does not see new pkg added
                 # by other workers. it gives db error for pkg with same title.
                 model.Session.rollback()
-                pkg['name'] = self.make_package_name(dataset_processed["title"], harvest_object.guid)
-                pkg = get_action('package_create')(self.context(), pkg)
-                log.warn('created package %s (%s) from %s' % (pkg["name"], pkg["id"], harvest_object.source.url))
+                log.warn('package already created %s (%s) from %s' % (pkg["name"], pkg["id"], harvest_object.source.url))
             except Exception as e:
                 log.error('Failed to create package %s from %s\n\t%s\n\t%s' % (pkg["name"], harvest_object.source.url, unicode(pkg), unicode(e)))
                 raise
