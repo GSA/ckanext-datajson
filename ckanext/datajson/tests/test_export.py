@@ -15,7 +15,30 @@ class TestExport(FunctionalTestBase):
 
     @classmethod
     def setup_class(cls):
+        # Disable any extra plugins
+        # Our rollup_extras patch conflicts with processing of
+        # extras.publishing_status. Make sure not to load any other plugins to
+        # avoid that.
+        cls._ckan_plugins = config.get('ckan.plugins', None)
+        config['ckan.plugins'] = 'datajson'
+
+        # enable links (done in the INI file)
+        cls._inventory_links_enabled = config.get('ckanext.datajson.inventory_links_enabled', None)
+        config['ckanext.datajson.inventory_links_enabled'] = 'True'
+
         super(TestExport, cls).setup_class()
+
+    @classmethod
+    def teardown_class(cls):
+        reset_db()
+        super(TestExport, cls).teardown_class()
+
+        # Restore configuraiton
+        if cls._ckan_plugins:
+            config['ckan.plugins'] = cls._ckan_plugins
+        if cls._inventory_links_enabled:
+            config['ckanext.datajson.inventory_links_enabled'] = cls._inventory_links_enabled
+
 
     def create_datasets(self):
 
@@ -54,10 +77,6 @@ class TestExport(FunctionalTestBase):
         
     def test_draft_json(self):
         """ test /org-id/draft.json """
-        
-        # enable links (done in the INI file)
-        config['ckanext.datajson.inventory_links_enabled'] = "True"
-        
         # create datasets
         self.create_datasets()
         
@@ -80,7 +99,10 @@ class TestExport(FunctionalTestBase):
         raw = f.read()
         f.close()
 
-        """ data sample
+        """
+        Example data.json structure
+        This is helpful to keep in mind while making assertions on the content.
+
         {
             "conformsTo": "https://project-open-data.cio.gov/v1.1/schema", 
             "describedBy": "https://project-open-data.cio.gov/v1.1/schema/catalog.json", 
@@ -109,8 +131,9 @@ class TestExport(FunctionalTestBase):
                     "language": ["en-US"]
                     }
                 ]
-        } """
-        
+        }
+        """
+
         data_res = json.loads(raw)
         datasets = data_res['dataset']
         titles = [d['title'] for d in datasets]

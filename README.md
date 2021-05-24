@@ -231,6 +231,9 @@ Lint the code.
 
     $ make lint
 
+_Note: the `lint` target is only expected to work with python 3, and not in the
+legacy environment._
+
 
 ### Matrix builds
 
@@ -238,10 +241,10 @@ The existing development environment assumes a full catalog.data.gov test setup.
 it difficult to develop and test against new versions of CKAN (or really any
 dependency) because everything is tightly coupled and would require us to
 upgrade everything at once which doesn't really work. A new make target
-`test-new` is introduced with a new docker-compose file.
+`test-legacy` is introduced with a legacy docker-compose file.
 
-The "new" development environment drops as many dependencies as possible. It is
-not meant to have feature parity with
+The "new" (default) development environment drops as many dependencies as
+possible. It is not meant to have feature parity with
 [GSA/catalog.data.gov](https://github.com/GSA/catalog.data.gov/). Tests should
 mock external dependencies where possible.
 
@@ -258,6 +261,10 @@ when interacting with this environment.
 
     $ make COMPOSE_FILE=docker-compose.legacy.yml up
     $ make COMPOSE_FILE=docker-compose.legacy.yml test-legacy
+
+_Note: the `test-legacy` target is only expected to work with the legacy
+environment._
+
 
 Variable | Description | Default
 -------- | ----------- | -------
