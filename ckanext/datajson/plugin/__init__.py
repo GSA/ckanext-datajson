@@ -16,8 +16,8 @@ from ckan.lib.base import BaseController, render, c
 from jsonschema.exceptions import best_match
 from ckan.plugins.toolkit import request, response
 
-from .helpers import get_export_map_json, detect_publisher, get_validator
-from .package2pod import Package2Pod
+from ..helpers import get_export_map_json, detect_publisher, get_validator
+from ..package2pod import Package2Pod
 
 logger = logging.getLogger(__name__)
 draft4validator = get_validator()
@@ -27,8 +27,15 @@ try:
 except ImportError:
     from sqlalchemy.util import OrderedDict
 
+try:
+    p.toolkit.requires_ckan_version("2.9")
+except p.toolkit.CkanVersionException:
+    from ckanext.datajson.plugin.pylons_plugin import MixinPlugin
+else:
+    from ckanext.datajson.plugin.flask_plugin import MixinPlugin
 
-class DataJsonPlugin(p.SingletonPlugin):
+
+class DataJsonPlugin(MixinPlugin, p.SingletonPlugin):
     p.implements(p.interfaces.IConfigurer)
     p.implements(p.ITemplateHelpers)
     p.implements(p.interfaces.IRoutes, inherit=True)
@@ -53,7 +60,7 @@ class DataJsonPlugin(p.SingletonPlugin):
 
         # Adds our local templates directory. It's smart. It knows it's
         # relative to the path of *this* file. Wow.
-        p.toolkit.add_template_directory(config, "templates")
+        p.toolkit.add_template_directory(config, "../templates")
 
     @staticmethod
     def datajson_inventory_links_enabled():
