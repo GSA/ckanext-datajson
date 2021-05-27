@@ -338,7 +338,7 @@ class DataJsonController(BaseController):
         """
         import zipfile
 
-        o = io.StringIO()
+        o = io.BytesIO()
         zf = zipfile.ZipFile(o, mode='w')
 
         data_file_name = 'data.json'
