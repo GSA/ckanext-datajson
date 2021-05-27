@@ -6,17 +6,22 @@ from datetime import datetime
 import json
 import logging
 from urllib.error import URLError
+
+import pytest
+from mock import Mock, patch
+
 from ckan.plugins.toolkit import config
 import ckan.plugins as p
 import ckanext.harvest.model as harvest_model
 import ckanext.harvest.queue as queue
-from . import mock_datajson_source
+import ckanext.harvest.tests.fixtures
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
 from ckanext.datajson.harvester_datajson import DataJsonHarvester
 from ckanext.datajson.exceptions import ParentNotHarvestedException
+
+from . import mock_datajson_source
 from .factories import HarvestJobObj, HarvestSourceObj
-from mock import Mock, patch
 
 try:
     from ckan.tests.helpers import reset_db, call_action
@@ -27,6 +32,9 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
+@pytest.mark.ckan_config('ckan.plugins', 'harvest datajson datajson_harvest')
+@pytest.mark.usefixtures('with_plugins', 'clean_db', 'clean_index', 'harvest_setup', 'clear_queues')
 class TestIntegrationDataJSONHarvester28(object):
     """Integration tests using a complete CKAN 2.8+ harvest stack. Unlike unit tests,
     these tests are only run on a complete CKAN 2.8 stack."""
@@ -39,12 +47,9 @@ class TestIntegrationDataJSONHarvester28(object):
 
     @classmethod
     def setup(cls):
-        # Start data json sources server we can test harvesting against it
-        reset_db()
-        harvest_model.setup()
         cls.user = Sysadmin()
         cls.org = Organization()
-        
+
     def run_gather(self, url, config_str='{}'):
 
         self.source = HarvestSourceObj(url=url, owner_org=self.org['id'], config=config_str)

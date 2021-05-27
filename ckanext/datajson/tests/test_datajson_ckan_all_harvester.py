@@ -6,6 +6,8 @@ import json
 import logging
 from urllib.error import HTTPError, URLError
 
+import pytest
+
 import ckanext.harvest.model as harvest_model
 from . import mock_datajson_source
 from ckan import model
@@ -14,15 +16,15 @@ from ckanext.datajson.harvester_datajson import DataJsonHarvester
 from .factories import HarvestJobObj, HarvestSourceObj
 
 try:
-    from ckan.tests.helpers import reset_db
     from ckan.tests.factories import Sysadmin
 except ImportError:
-    from ckan.new_tests.helpers import reset_db
     from ckan.new_tests.factories import Sysadmin
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.ckan_config('ckan.plugins', 'harvest datajson')
+@pytest.mark.usefixtures('with_plugins', 'clean_db', 'clean_index', 'harvest_setup')
 class TestDataJSONHarvester(object):
 
     @classmethod
@@ -33,9 +35,6 @@ class TestDataJSONHarvester(object):
 
     @classmethod
     def setup(cls):
-        # Start data json sources server we can test harvesting against it
-        reset_db()
-        harvest_model.setup()
         cls.user = Sysadmin()
 
     def run_gather(self, url):
