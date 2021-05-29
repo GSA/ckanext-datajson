@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.ckan_config('ckan.plugins', 'harvest datajson datajson_harvest')
-@pytest.mark.usefixtures('with_plugins', 'clean_db', 'clean_index', 'harvest_setup', 'clear_queues')
+@pytest.mark.usefixtures('with_plugins', 'clean_db', 'clean_index', 'harvest_setup', 'clean_queues')
 class TestIntegrationDataJSONHarvester28(object):
     """Integration tests using a complete CKAN 2.8+ harvest stack. Unlike unit tests,
     these tests are only run on a complete CKAN 2.8 stack."""
