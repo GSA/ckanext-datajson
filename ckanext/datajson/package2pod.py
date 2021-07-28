@@ -13,6 +13,9 @@ import collections
 from logging import getLogger
 
 from helpers import *
+from ckan import logic
+from ckan import model
+import ckan.plugins as p
 
 log = getLogger(__name__)
 
@@ -461,6 +464,26 @@ class Wrappers:
                 [(x, y) for x, y in resource.iteritems() if y is not None and y != "" and y != []])
 
             arr += [OrderedDict(striped_resource)]
+
+        # Add full metadata link to distribution, as described here:
+        # https://github.com/GSA/ckanext-datajson/tree/main/ckanext/datajson/tests/datajson-samples#geospatial-full-metadata-link-example
+        for e in package['extras']:
+            if e['key'] == 'harvest_object_id':
+                harvest_object_id = e['value']
+
+                # Get full harvest object
+                context = {'model': model, 'user': p.toolkit.c.user or p.toolkit.c.author}
+                harvest_obj = logic.get_action('harvest_object_show')(context, {'id': harvest_object_id})
+
+                # Build full metadata link
+                resource = OrderedDict([('@type', "dcat:Distribution")])
+                resource["title"] = "Original Metadata"
+                resource["downloadURL"] = harvest_obj['extras']['waf_location']
+                resource["conformsTo"] = "http://www.isotc211.org/2005/gmi"
+                resource["description"] = "The metadata original source"
+                resource["mediaType"] = "text/xml"
+                resource["format"] = "XML"
+                arr += [OrderedDict(resource)]
 
         return arr
 

@@ -111,6 +111,11 @@ And then in your Apache configuration add:
 
 And be sure to create /tmp/apache_cache and make it writable by the Apache process.
 
+If you are deploying in a container environment, a new route has been included: cache_data.json.
+This will create the data.json file and save it locally, which will then be served on subsequent
+requests to /data.json. You can hit cache_data.json again to update. This cache_data.json request
+should time out if the number of datasets is large (> 1000 or so).
+
 Generating /data.json Off-Line
 ------------------------------
 
