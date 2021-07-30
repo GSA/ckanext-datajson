@@ -19,6 +19,9 @@ import ckan.plugins as p
 
 log = getLogger(__name__)
 
+# Make Site_url from CKAN config globally accessible across various singletons
+SITE_URL = "localhost:5000"
+
 
 class Package2Pod:
     def __init__(self):
@@ -63,8 +66,11 @@ class Package2Pod:
         return content
 
     @staticmethod
-    def convert_package(package, json_export_map, redaction_enabled=False):
+    def convert_package(package, json_export_map, site_url, redaction_enabled=False):
         import sys, os
+
+        global SITE_URL
+        SITE_URL = site_url
 
         try:
             dataset = Package2Pod.export_map_fields(package, json_export_map, redaction_enabled)
@@ -478,7 +484,7 @@ class Wrappers:
                 # Build full metadata link
                 resource = OrderedDict([('@type', "dcat:Distribution")])
                 resource["title"] = "Original Metadata"
-                resource["downloadURL"] = harvest_obj['extras']['waf_location']
+                resource["downloadURL"] = SITE_URL + "/harvest/object/" + harvest_obj['id']
                 resource["conformsTo"] = "http://www.isotc211.org/2005/gmi"
                 resource["description"] = "The metadata original source"
                 resource["mediaType"] = "text/xml"
