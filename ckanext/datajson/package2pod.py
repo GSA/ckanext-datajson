@@ -478,7 +478,7 @@ class Wrappers:
                 # Build full metadata link
                 resource = OrderedDict([('@type', "dcat:Distribution")])
                 resource["title"] = "Original Metadata"
-                resource["downloadURL"] = harvest_obj['extras']['waf_location']
+                resource["downloadURL"] = "https://data.doi.gov/harvest/object/" + harvest_obj['id']
                 resource["conformsTo"] = "http://www.isotc211.org/2005/gmi"
                 resource["description"] = "The metadata original source"
                 resource["mediaType"] = "text/xml"
