@@ -278,7 +278,7 @@ class DataJsonController(BaseController):
                             continue
 
                     redaction_enabled = ('redacted' == export_type)
-                    datajson_entry = Package2Pod.convert_package(pkg, json_export_map, redaction_enabled)
+                    datajson_entry = Package2Pod.convert_package(pkg, json_export_map, DataJsonPlugin.site_url, redaction_enabled)
                     errors = None
                     if 'errors' in datajson_entry.keys():
                         errors_json.append(datajson_entry)
