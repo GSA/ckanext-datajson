@@ -103,7 +103,7 @@ class DataJsonController(BaseController):
         return self.generate_output(org_id=None)
 
     def generate_org_json(self, org_id):
-        return self.make_json(export_type='datajson', owner_org=org_id)
+        return self.generate_output(org_id=org_id)
 
     def generate_redacted(self, org_id):
         return self.generate('redacted', org_id=org_id)
