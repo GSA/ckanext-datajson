@@ -11,7 +11,6 @@ import re
 from ckan.lib.base import BaseController, render, c
 from jsonschema.exceptions import best_match
 from pylons import request, response
-
 from helpers import get_export_map_json, detect_publisher, get_validator
 from package2pod import Package2Pod
 
@@ -33,11 +32,8 @@ class DataJsonPlugin(p.SingletonPlugin):
         # is called before after_map, in which we need the configuration directives
         # to know how to set the paths.
 
-        # TODO commenting out enterprise data inventory for right now
-        # DataJsonPlugin.route_edata_path = config.get("ckanext.enterprisedatajson.path", "/enterprisedata.json")
         DataJsonPlugin.route_enabled = config.get("ckanext.datajson.url_enabled", "True") == 'True'
-        DataJsonPlugin.route_path = config.get("ckanext.datajson.path", "/data.json")
-        DataJsonPlugin.cache_path = config.get("ckanext.datajson.cache_path", "/cache_data.json")
+        DataJsonPlugin.route_path = config.get("ckanext.datajson.path", "/internal/data.json")
         DataJsonPlugin.route_ld_path = config.get("ckanext.datajsonld.path",
                                                   re.sub(r"\.json$", ".jsonld", DataJsonPlugin.route_path))
         DataJsonPlugin.ld_id = config.get("ckanext.datajsonld.id", config.get("ckan.site_url"))
@@ -71,19 +67,10 @@ class DataJsonPlugin(p.SingletonPlugin):
             # Have 2 routes: 1 to create the json file (and store locally),
             # the other to return the local file
             m.connect('datajson_export', DataJsonPlugin.route_path,
-                      controller='ckanext.datajson.plugin:DataJsonController', action='return_json')
-
-            m.connect('datajson_creation', DataJsonPlugin.cache_path,
-                      controller='ckanext.datajson.plugin:DataJsonController', action='generate_json')
+                    controller='ckanext.datajson.plugin:DataJsonController', action='generate_json')
 
             m.connect('organization_export', '/organization/{org_id}/data.json',
                       controller='ckanext.datajson.plugin:DataJsonController', action='generate_org_json')
-            # TODO commenting out enterprise data inventory for right now
-            # m.connect('enterprisedatajson', DataJsonPlugin.route_edata_path,
-            # controller='ckanext.datajson.plugin:DataJsonController', action='generate_enterprise')
-
-            # m.connect('datajsonld', DataJsonPlugin.route_ld_path,
-            # controller='ckanext.datajson.plugin:DataJsonController', action='generate_jsonld')
 
         if DataJsonPlugin.inventory_links_enabled:
             m.connect('public_data_listing', '/organization/{org_id}/redacted.json',
@@ -105,31 +92,11 @@ class DataJsonPlugin(p.SingletonPlugin):
 class DataJsonController(BaseController):
     _errors_json = []
 
-    def return_json(self):
-        try:
-            data_json_file = open('site_data.json')
-            cached_json = data_json_file.read()
-            response.content_type = 'application/json; charset=UTF-8'
-
-            # allow caching of response (e.g. by Apache)
-            del response.headers["Cache-Control"]
-            del response.headers["Pragma"]
-            data_json_file.close()
-            return p.toolkit.literal(cached_json)
-        except:
-            # Either the file doesn't exist, or something is wrong.
-            # Generate the file on the fly.
-            logger.debug("The datajson file doesn't exist, creating it")
-            return self.generate_output('json')
-
     def generate_json(self):
-        return self.generate_output('json')
+        return self.generate_output(org_id=None)
 
     def generate_org_json(self, org_id):
-        return self.generate_output('json', org_id=org_id)
-
-    # def generate_jsonld(self):
-    #     return self.generate_output('json-ld')
+        return self.generate_output(org_id=org_id)
 
     def generate_redacted(self, org_id):
         return self.generate('redacted', org_id=org_id)
@@ -141,7 +108,6 @@ class DataJsonController(BaseController):
         return self.generate('draft', org_id=org_id)
 
     def generate(self, export_type='datajson', org_id=None):
-        """ generate a JSON response """
         logger.debug('Generating JSON for {} to {} ({})'.format(export_type, org_id, c.user))
 
         if export_type not in ['draft', 'redacted', 'unredacted']:
@@ -171,7 +137,7 @@ class DataJsonController(BaseController):
         del response.headers["Pragma"]
         return self.make_json(export_type, org_id)
 
-    def generate_output(self, fmt='json', org_id=None):
+    def generate_output(self, org_id=None):
         self._errors_json = []
         # set content type (charset required or pylons throws an error)
         response.content_type = 'application/json; charset=UTF-8'
@@ -184,31 +150,11 @@ class DataJsonController(BaseController):
         # output
         data = self.make_json(export_type='datajson', owner_org=org_id)
 
-        # if fmt == 'json-ld':
-        #     # Convert this to JSON-LD.
-        #     data = OrderedDict([
-        #         ("@context", OrderedDict([
-        #             ("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
-        #             ("dcterms", "http://purl.org/dc/terms/"),
-        #             ("dcat", "http://www.w3.org/ns/dcat#"),
-        #             ("foaf", "http://xmlns.com/foaf/0.1/"),
-        #         ])),
-        #         ("@id", DataJsonPlugin.ld_id),
-        #         ("@type", "dcat:Catalog"),
-        #         ("dcterms:title", DataJsonPlugin.ld_title),
-        #         ("rdfs:label", DataJsonPlugin.ld_title),
-        #         ("foaf:homepage", DataJsonPlugin.site_url),
-        #         ("dcat:dataset", [dataset_to_jsonld(d) for d in data.get('dataset')]),
-        #     ])
+        return p.toolkit.literal(json.dumps(data))
 
-        if org_id is None:
-            data_json_file = open('site_data.json', 'w')
-            data_json_file.write(json.dumps(data, indent=2))
-            data_json_file.close()
-
-        return p.toolkit.literal(json.dumps(data, indent=2))
-
-    def make_json(self, export_type='datajson', owner_org=None):
+    def make_json(self, export_type='datajson', owner_org=None, with_private=False):
+        logger.info('\n{}\n'.format(owner_org))
+        
         # Error handler for creating error log
         stream = StringIO.StringIO()
         eh = logging.StreamHandler(stream)
@@ -219,86 +165,80 @@ class DataJsonController(BaseController):
 
         data = ''
         output = []
+        first_line = True
+        
+        
         errors_json = []
         Package2Pod.seen_identifiers = set()
 
         try:
-            # Build the data.json file.
+            n = 500
+            page = 1
+            dataset_list = []
+            q = '+capacity:public' if not with_private else '*:*'
+            fq = 'dataset_type:dataset'
             if owner_org:
-                if 'datajson' == export_type:
-                    # we didn't check ownership for this type of export, so never load private datasets here
-                    packages = DataJsonController._get_ckan_datasets(org=owner_org)
-                    if not packages:
-                        packages = self.get_packages(owner_org=owner_org, with_private=False)
-                else:
-                    packages = self.get_packages(owner_org=owner_org, with_private=True)
-            else:
-                # TODO: load data by pages
-                # packages = p.toolkit.get_action("current_package_list_with_resources")(
-                # None, {'limit': 50, 'page': 300})
-                packages = DataJsonController._get_ckan_datasets()
-                # packages = p.toolkit.get_action("current_package_list_with_resources")(None, {})
+                fq += " AND organization:" + owner_org
+            while True:
+                search_data_dict = {
+                    'q': q,
+                    'fq': fq,
+                    'sort': 'metadata_modified desc',
+                    'rows': n,
+                    'start': n * (page - 1),
+                }
+                query = p.toolkit.get_action('package_search')({}, search_data_dict)
+                packages = query['results']
+                """ if owner_org:
+                    if 'datajson' == export_type:
+                        if not packages:
+                            packages = self.get_packages(owner_org=owner_org, with_private=False) """
+                if len(query['results']):
+                    json_export_map = get_export_map_json('export.map.json')
 
-            json_export_map = get_export_map_json('export.map.json')
+                    if json_export_map:
+                        for pkg in packages:
+                            if json_export_map.get('debug'):
+                                output.append(pkg)
+                            extras = dict([(x['key'], x['value']) for x in pkg.get('extras', {})])
 
-            if json_export_map:
-                for pkg in packages:
-                    if json_export_map.get('debug'):
-                        output.append(pkg)
-                    # logger.error('package: %s', json.dumps(pkg))
-                    # logger.debug("processing %s" % (pkg.get('title')))
-                    extras = dict([(x['key'], x['value']) for x in pkg.get('extras', {})])
+                            # unredacted = all non-draft datasets (public + private)
+                            # redacted = public-only, non-draft datasets
+                            if export_type in ['unredacted', 'redacted']:
+                                if 'Draft' == extras.get('publishing_status'):
+                                    continue
+                            # draft = all draft-only datasets
+                            elif 'draft' == export_type:
+                                if 'publishing_status' not in extras.keys() or extras.get('publishing_status') != 'Draft':
+                                    continue
 
-                    # unredacted = all non-draft datasets (public + private)
-                    # redacted = public-only, non-draft datasets
-                    if export_type in ['unredacted', 'redacted']:
-                        if 'Draft' == extras.get('publishing_status'):
-                            # publisher = detect_publisher(extras)
-                            # logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted (%s)\n",
-                            #             pkg.get('id'), pkg.get('title'), publisher,
-                            #             'publishing_status: Draft')
-                            # self._errors_json.append(OrderedDict([
-                            #     ('id', pkg.get('id')),
-                            #     ('name', pkg.get('name')),
-                            #     ('title', pkg.get('title')),
-                            #     ('errors', [(
-                            #         'publishing_status: Draft',
-                            #         [
-                            #             'publishing_status: Draft'
-                            #         ]
-                            #     )])
-                            # ]))
+                            redaction_enabled = ('redacted' == export_type)
+                            datajson_entry = Package2Pod.convert_package(pkg, json_export_map, DataJsonPlugin.site_url, redaction_enabled)
 
-                            continue
-                            # if 'redacted' == export_type and re.match(r'[Nn]on-public', extras.get('public_access_level')):
-                            #     continue
-                    # draft = all draft-only datasets
-                    elif 'draft' == export_type:
-                        if 'publishing_status' not in extras.keys() or extras.get('publishing_status') != 'Draft':
-                            continue
+                            errors = None
+                            if 'errors' in datajson_entry.keys():
+                                errors_json.append(datajson_entry)
+                                errors = datajson_entry.get('errors')
+                                datajson_entry = None
 
-                    redaction_enabled = ('redacted' == export_type)
-                    datajson_entry = Package2Pod.convert_package(pkg, json_export_map, DataJsonPlugin.site_url, redaction_enabled)
-                    errors = None
-                    if 'errors' in datajson_entry.keys():
-                        errors_json.append(datajson_entry)
-                        errors = datajson_entry.get('errors')
-                        datajson_entry = None
-
-                    if datajson_entry and \
-                            (not json_export_map.get('validation_enabled') or self.is_valid(datajson_entry)):
-                        # logger.debug("writing to json: %s" % (pkg.get('title')))
-                        output.append(datajson_entry)
-                    else:
-                        publisher = detect_publisher(extras)
-                        if errors:
-                            logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason below:\n\t%s\n",
-                                        pkg.get('id', None), pkg.get('title', None), pkg.get('organization').get('title'), errors)
+                            if datajson_entry and \
+                                    (not json_export_map.get('validation_enabled') or self.is_valid(datajson_entry)):
+                                output.append(datajson_entry)
+                            else:
+                                publisher = detect_publisher(extras)
+                                if errors:
+                                    logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason below:\n\t%s\n",
+                                                pkg.get('id', None), pkg.get('title', None), pkg.get('organization').get('title'), errors)
+                                else:
+                                    logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason above.\n",
+                                                pkg.get('id', None), pkg.get('title', None), pkg.get('organization').get('title'))
+                        if 'datajson' == export_type:
+                            page += 1
                         else:
-                            logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason above.\n",
-                                        pkg.get('id', None), pkg.get('title', None), pkg.get('organization').get('title'))
-
-                data = Package2Pod.wrap_json_catalog(output, json_export_map)
+                            break
+                else:
+                    break 
+            data = Package2Pod.wrap_json_catalog(output, json_export_map)       
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             filename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -311,11 +251,8 @@ class DataJsonController(BaseController):
         logger.removeHandler(eh)
         stream.close()
 
-        # Skip compression if we export whole /data.json catalog
-        if 'datajson' == export_type:
-            return data
+        return data
 
-        return self.write_zip(data, error, errors_json, zip_name=export_type)
 
     def get_packages(self, owner_org, with_private=True):
         # Build the data.json file.
@@ -439,32 +376,3 @@ class DataJsonController(BaseController):
                     c.errors.append(("No Errors", ["Great job!"]))
 
         return render('datajsonvalidator.html')
-
-    @staticmethod
-    def _get_ckan_datasets(org=None, with_private=False):
-        n = 500
-        page = 1
-        dataset_list = []
-
-        q = '+capacity:public' if not with_private else '*:*'
-
-        fq = 'dataset_type:dataset'
-        if org:
-            fq += " AND organization:" + org
-
-        while True:
-            search_data_dict = {
-                'q': q,
-                'fq': fq,
-                'sort': 'metadata_modified desc',
-                'rows': n,
-                'start': n * (page - 1),
-            }
-
-            query = p.toolkit.get_action('package_search')({}, search_data_dict)
-            if len(query['results']):
-                dataset_list.extend(query['results'])
-                page += 1
-            else:
-                break
-        return dataset_list
