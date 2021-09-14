@@ -243,7 +243,7 @@ def get_packages(owner_org, with_private=True):
     if six.PY2:
         if 'sub-agencies' in sub_agency.extras.col.target \
                 and sub_agency.extras.col.target['sub-agencies'].state == 'active':
-            sub_agencies = sub_agency.extras.col.target['sub-agencies']
+            sub_agencies = sub_agency.extras.col.target['sub-agencies'].value
             sub_agencies_list = sub_agencies.split(",")
             for sub in sub_agencies_list:
                 sub_packages = get_all_group_packages(group_id=sub, with_private=with_private)
