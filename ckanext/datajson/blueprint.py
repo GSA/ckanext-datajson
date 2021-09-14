@@ -252,7 +252,7 @@ def get_packages(owner_org, with_private=True):
     else:
         if 'sub-agencies' in sub_agency.extras.col.keys() \
                 and sub_agency.extras.col['sub-agencies'].state == 'active':
-            sub_agencies = sub_agency.extras.col['sub-agencies']
+            sub_agencies = sub_agency.extras.col['sub-agencies'].value
             sub_agencies_list = sub_agencies.split(",")
             for sub in sub_agencies_list:
                 sub_packages = get_all_group_packages(group_id=sub, with_private=with_private)
@@ -377,7 +377,6 @@ def validator():
     return render('datajsonvalidator.html')
 
 
-@staticmethod
 def _get_ckan_datasets(org=None, with_private=False):
     n = 500
     page = 1
