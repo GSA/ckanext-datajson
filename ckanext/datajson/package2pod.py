@@ -16,6 +16,9 @@ from helpers import *
 from ckan import logic
 from ckan import model
 import ckan.plugins as p
+import validators
+import urllib
+import datajsonvalidator
 
 log = getLogger(__name__)
 
@@ -460,9 +463,13 @@ class Wrappers:
                 if 'mediaType' in resource:
                     if 'accessURL' in resource:
                         resource.pop('accessURL')
-                    resource['downloadURL'] = res_url
+                    resource['downloadURL'] = urllib.quote(res_url.replace('URL:', '').strip())
+                    if not validators.url(resource['downloadURL']):
+                        resource['downloadURL'] = "https://google.com"
                 else:
-                    resource['accessURL'] = res_url
+                    resource['accessURL'] = urllib.quote(res_url.replace('URL:', '').strip())
+                    if not validators.url(resource['accessURL']):
+                        resource['accessURL'] = "https://google.com"
             else:
                 log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
