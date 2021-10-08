@@ -9,6 +9,7 @@ import sys
 import json
 import ckan.plugins.toolkit as tk
 import collections
+import ckan.plugins.toolkit as toolkit
 
 from logging import getLogger
 
@@ -16,6 +17,7 @@ from helpers import *
 from ckan import logic
 from ckan import model
 import ckan.plugins as p
+import ckan
 import urllib
 import datajsonvalidator
 
@@ -380,9 +382,11 @@ class Wrappers:
             else:
                 email = package.get(contact_point_map.get('hasEmail').get('field'),
                                     package.get('maintainer_email'))
+            
 
             if email and not is_redacted(email) and '@' in email:
-                email = 'mailto:' + email
+                if 'mailto:' not in email:
+                    email = 'mailto:' + email
 
             if Wrappers.redaction_enabled:
                 redaction_reason = get_extra(package, 'redacted_' + contact_point_map.get('hasEmail').get('field'),
@@ -395,9 +399,25 @@ class Wrappers:
             contact_point = OrderedDict([('@type', 'vcard:Contact')])
             if fn:
                 contact_point['fn'] = fn
+            else:
+                contact_point['fn'] = toolkit.get_action('organization_show')(
+                    None, {'id': package.get('organization').get('title')}
+                )
+            
+            # check to see if organization's email matches the regex validation
+            # if it does not, then set the organization's default email
             if email:
-                contact_point['hasEmail'] = email
-
+                if re.search('^mailto:[\w\_\~\!\$\&\'\(\)\*\+\,\;\=\:.-]+@[\w.-]+\.[\w.-]+?$', email):
+                    contact_point['hasEmail'] = email
+                else:
+                    org_extras = toolkit.get_action('organization_show')(None, {
+                        'id': package.get('organization').get('name')
+                        })['extras']
+                    for entry in org_extras:
+                        for key, value in entry.items():
+                            if entry[key] == 'default_org_email':
+                                default_email = entry['value']
+                    contact_point['hasEmail'] = default_email if 'mailto:' in default_email else 'mailto:' + default_email
             return contact_point
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
