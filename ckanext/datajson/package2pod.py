@@ -485,19 +485,18 @@ class Wrappers:
                 if 'mediaType' in resource:
                     if 'accessURL' in resource:
                         resource.pop('accessURL')
-                    resource['downloadURL'] = res_url.replace('URL:', '').strip()
                     if not datajsonvalidator.check_url_field(True, resource, 'downloadURL', None, {}):
                         resource['downloadURL'] = urllib.quote(res_url.replace('URL:', '').strip())
                         if not datajsonvalidator.check_url_field(True, resource, 'downloadURL', None, {}):
-                            resource.pop('downloadURL')
+                            resource['downloadURL'] = None
                 else:
-                    resource['accessURL'] = res_url.replace('URL:', '').strip()
                     if not datajsonvalidator.check_url_field(True, resource, 'accessURL', None, {}):
                         resource['accessURL'] = urllib.quote(res_url.replace('URL:', '').strip())
                         if not datajsonvalidator.check_url_field(True, resource, 'accessURL', None, {}):
-                            resource.pop('accessURL')
+                            resource['accessURL'] = None
             else:
                 log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
+
 
             striped_resource = OrderedDict(
                 [(x, y) for x, y in resource.iteritems() if y is not None and y != "" and y != []])
