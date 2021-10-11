@@ -403,21 +403,24 @@ class Wrappers:
                 contact_point['fn'] = toolkit.get_action('organization_show')(
                     None, {'id': package.get('organization').get('title')}
                 )
+
+            def get_default_email():
+                org_extras = toolkit.get_action('organization_show')(None, {
+                    'id':package.get('organization').get('name')
+                    })['extras']
+                for entry in org_extras:
+                    for key, value in entry.items():
+                        if entry[key] == 'default_org_email':
+                            default_email = entry['value']
+                return default_email if 'mailto:' in default_email else 'mailto:' + default_email
             
-            # check to see if organization's email matches the regex validation
-            # if it does not, then set the organization's default email
             if email:
                 if re.search('^mailto:[\w\_\~\!\$\&\'\(\)\*\+\,\;\=\:.-]+@[\w.-]+\.[\w.-]+?$', email):
                     contact_point['hasEmail'] = email
                 else:
-                    org_extras = toolkit.get_action('organization_show')(None, {
-                        'id': package.get('organization').get('name')
-                        })['extras']
-                    for entry in org_extras:
-                        for key, value in entry.items():
-                            if entry[key] == 'default_org_email':
-                                default_email = entry['value']
-                    contact_point['hasEmail'] = default_email if 'mailto:' in default_email else 'mailto:' + default_email
+                    contact_point['hasEmail'] = get_default_email()
+            else:
+                contact_point['hasEmail'] = get_default_email()
             return contact_point
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
