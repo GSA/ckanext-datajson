@@ -400,9 +400,7 @@ class Wrappers:
             if fn:
                 contact_point['fn'] = fn
             else:
-                contact_point['fn'] = toolkit.get_action('organization_show')(
-                    None, {'id': package.get('organization').get('title')}
-                )
+                contact_point['fn'] = package.get('organization').get('title')
 
             def get_default_email():
                 org_extras = toolkit.get_action('organization_show')(None, {
@@ -450,6 +448,7 @@ class Wrappers:
             return arr
 
         for r in package["resources"]:
+            valid_resource = True
             resource = OrderedDict([('@type', "dcat:Distribution")])
 
             for pod_key, json_map in distribution_map.iteritems():
@@ -488,20 +487,20 @@ class Wrappers:
                     if not datajsonvalidator.check_url_field(True, resource, 'downloadURL', None, {}):
                         resource['downloadURL'] = urllib.quote(res_url.replace('URL:', '').strip())
                         if not datajsonvalidator.check_url_field(True, resource, 'downloadURL', None, {}):
-                            resource['downloadURL'] = None
+                            valid_resource = False
                 else:
                     if not datajsonvalidator.check_url_field(True, resource, 'accessURL', None, {}):
                         resource['accessURL'] = urllib.quote(res_url.replace('URL:', '').strip())
                         if not datajsonvalidator.check_url_field(True, resource, 'accessURL', None, {}):
-                            resource['accessURL'] = None
+                            valid_resource = False
             else:
                 log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
 
             striped_resource = OrderedDict(
                 [(x, y) for x, y in resource.iteritems() if y is not None and y != "" and y != []])
-
-            arr += [OrderedDict(striped_resource)]
+            if valid_resource:
+                arr += [OrderedDict(striped_resource)]
 
         # Add full metadata link to distribution, as described here:
         # https://github.com/GSA/ckanext-datajson/tree/main/ckanext/datajson/tests/datajson-samples#geospatial-full-metadata-link-example
