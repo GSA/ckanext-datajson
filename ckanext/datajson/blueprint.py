@@ -1,24 +1,27 @@
 
-from builtins import str
 import io
 import json
 import logging
-import six
+import os
 import sys
+from builtins import str
+from re import L
 
-from ckan.common import c
+# from pylons import request, response
 import ckan.lib.dictization.model_dictize as model_dictize
 import ckan.model as model
 import ckan.plugins as p
-from ckan.plugins.toolkit import request, render
-from flask.wrappers import Response
+import six
+from ckan.common import c
+from ckan.plugins.toolkit import render, request
 from flask import Blueprint
+from flask.wrappers import Response
 from jsonschema.exceptions import best_match
-import os
 
-from .helpers import get_export_map_json, detect_publisher, get_validator
+import plugin
+
+from .helpers import detect_publisher, get_export_map_json, get_validator
 from .package2pod import Package2Pod
-
 
 datapusher = Blueprint('datajson', __name__)
 
@@ -30,11 +33,11 @@ _zip_name = ''
 
 
 def generate_json():
-    return generate_output('json')
+    return generate_output(org_id=None)
 
 
 def generate_org_json(org_id):
-    return generate_output('json', org_id=org_id)
+    return generate_output(org_id=org_id)
 
 
 # def generate_jsonld():
@@ -54,7 +57,6 @@ def generate_draft(org_id):
 
 
 def generate(export_type='datajson', org_id=None):
-    """ generate a JSON response """
     logger.debug('Generating JSON for {} to {} ({})'.format(export_type, org_id, c.user))
 
     if export_type not in ['draft', 'redacted', 'unredacted']:
@@ -65,9 +67,9 @@ def generate(export_type='datajson', org_id=None):
     # If user is not editor or admin of the organization then don't allow unredacted download
     try:
         auth = p.toolkit.check_access('package_create',
-                                      {'model': model, 'user': c.user},
-                                      {'owner_org': org_id}
-                                      )
+                                    {'model': model, 'user': c.user},
+                                    {'owner_org': org_id}
+                                    )
     except p.toolkit.NotAuthorized:
         logger.error('NotAuthorized to generate JSON for {} to {} ({})'.format(export_type, org_id, c.user))
         auth = False
@@ -80,15 +82,15 @@ def generate(export_type='datajson', org_id=None):
 
     # allow caching of response (e.g. by Apache)
     # Commented because it works without it
-    # del Response.headers["Cache-Control"]
-    # del Response.headers["Pragma"]
-    resp = Response(make_json(export_type, org_id), mimetype='application/octet-stream')
-    resp.headers['Content-Disposition'] = 'attachment; filename="%s.zip"' % _zip_name
+    del Response.headers["Cache-Control"]
+    del Response.headers["Pragma"]
+    #resp = Response(make_json(export_type, org_id), mimetype='application/octet-stream')
+    #resp.headers['Content-Disposition'] = 'attachment; filename="%s.zip"' % _zip_name
 
-    return resp
+    return make_json(export_type, org_id)
 
 
-def generate_output(fmt='json', org_id=None):
+def generate_output(org_id=None):
     global _errors_json
     _errors_json = []
     # set content type (charset required or pylons throws an error)
@@ -102,28 +104,10 @@ def generate_output(fmt='json', org_id=None):
     # TODO special processing for enterprise
     # output
     data = make_json(export_type='datajson', owner_org=org_id)
-
-    # if fmt == 'json-ld':
-    #     # Convert this to JSON-LD.
-    #     data = OrderedDict([
-    #         ("@context", OrderedDict([
-    #             ("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
-    #             ("dcterms", "http://purl.org/dc/terms/"),
-    #             ("dcat", "http://www.w3.org/ns/dcat#"),
-    #             ("foaf", "http://xmlns.com/foaf/0.1/"),
-    #         ])),
-    #         ("@id", DataJsonPlugin.ld_id),
-    #         ("@type", "dcat:Catalog"),
-    #         ("dcterms:title", DataJsonPlugin.ld_title),
-    #         ("rdfs:label", DataJsonPlugin.ld_title),
-    #         ("foaf:homepage", DataJsonPlugin.site_url),
-    #         ("dcat:dataset", [dataset_to_jsonld(d) for d in data.get('dataset')]),
-    #     ])
-
-    return p.toolkit.literal(json.dumps(data, indent=2))
+    return p.toolkit.literal(json.dumps(data))
 
 
-def make_json(export_type='datajson', owner_org=None):
+def make_json(export_type='datajson', owner_org=None, with_private=False):
     # Error handler for creating error log
     stream = io.StringIO()
     eh = logging.StreamHandler(stream)
@@ -137,84 +121,72 @@ def make_json(export_type='datajson', owner_org=None):
     errors_json = []
     Package2Pod.seen_identifiers = set()
 
+    # first_line = True
+
     try:
+        n = 500
+        page = 1
+        dataset_list = []
+        q = '+capacity:public' if not with_private else '*:*'
+        fq = 'dataset_type:dataset'
         # Build the data.json file.
         if owner_org:
-            if 'datajson' == export_type:
-                # we didn't check ownership for this type of export, so never load private datasets here
-                packages = _get_ckan_datasets(org=owner_org)
-                if not packages:
-                    packages = get_packages(owner_org=owner_org, with_private=False)
-            else:
-                packages = get_packages(owner_org=owner_org, with_private=True)
-        else:
-            # TODO: load data by pages
-            # packages = p.toolkit.get_action("current_package_list_with_resources")(
-            # None, {'limit': 50, 'page': 300})
-            packages = _get_ckan_datasets()
-            # packages = p.toolkit.get_action("current_package_list_with_resources")(None, {})
+            fq += "AND organization:" + owner_org
+        
+        while True:
+            search_data_dict = {
+                'q': q,
+                'fq': fq,
+                'sort': 'metadata_modified desc',
+                'rows': n,
+                'start': n * (page - 1),
+            }
+            query = p.toolkit.get_action('package_search')({}, search_data_dict)
+            packages = query['results']
 
-        json_export_map = get_export_map_json()
+            if len(query['results']):
+                json_export_map = get_export_map_json('export.map.json')
 
-        if json_export_map:
-            for pkg in packages:
-                if json_export_map.get('debug'):
-                    output.append(pkg)
-                # logger.error('package: %s', json.dumps(pkg))
-                # logger.debug("processing %s" % (pkg.get('title')))
-                extras = dict([(x['key'], x['value']) for x in pkg.get('extras', {})])
+                if json_export_map:
+                    for pkg in packages:
+                        if json_export_map.get('debug'):
+                            output.append(pkg)
+                        extras = dict([(x['key'], x['value']) for x in pkg.get('extras', {})])
 
-                # unredacted = all non-draft datasets (public + private)
-                # redacted = public-only, non-draft datasets
-                if export_type in ['unredacted', 'redacted']:
-                    if 'Draft' == extras.get('publishing_status'):
-                        # publisher = detect_publisher(extras)
-                        # logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted (%s)\n",
-                        #             pkg.get('id'), pkg.get('title'), publisher,
-                        #             'publishing_status: Draft')
-                        # _errors_json.append(OrderedDict([
-                        #     ('id', pkg.get('id')),
-                        #     ('name', pkg.get('name')),
-                        #     ('title', pkg.get('title')),
-                        #     ('errors', [(
-                        #         'publishing_status: Draft',
-                        #         [
-                        #             'publishing_status: Draft'
-                        #         ]
-                        #     )])
-                        # ]))
-
-                        continue
-                        # if ('redacted' == export_type and
-                        #         re.match(r'[Nn]on-public', extras.get('public_access_level'))):
-                        #     continue
-                # draft = all draft-only datasets
-                elif 'draft' == export_type:
-                    if 'publishing_status' not in list(extras.keys()) or extras.get('publishing_status') != 'Draft':
-                        continue
-
-                redaction_enabled = ('redacted' == export_type)
-                datajson_entry = Package2Pod.convert_package(pkg, json_export_map, redaction_enabled)
-                errors = None
-                if 'errors' in list(datajson_entry.keys()):
-                    errors_json.append(datajson_entry)
-                    errors = datajson_entry.get('errors')
-                    datajson_entry = None
-
-                if datajson_entry and \
-                        (not json_export_map.get('validation_enabled') or is_valid(datajson_entry)):
-                    # logger.debug("writing to json: %s" % (pkg.get('title')))
-                    output.append(datajson_entry)
-                else:
-                    publisher = detect_publisher(extras)
-                    if errors:
-                        logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason below:\n\t%s\n",
-                                    pkg.get('id', None), pkg.get('title', None), publisher, errors)
+                        if export_type in ['unredacted', 'redacted']:
+                            if 'Draft' == extras.get('publishing_status'):
+                                continue
+                        elif 'draft' == export_type:
+                            if 'publishing_status' not in extras.keys() or extras.get('publishing_status') != 'Draft':
+                                continue
+                        
+                        redaction_enabled = 'redacted' == export_type
+                        datajson_entry = Package2Pod.convert_package(pkg, json_export_map, plugin.DataJsonPlugin.site_url, redaction_enabled)
+                        
+                        errors = None
+                        if 'errors' in datajson_entry.keys():
+                            errors_json.append(datajson_entry)
+                            errors = datajson_entry.get('errors')
+                            datajson_entry = None
+                        
+                        if datajson_entry and \
+                                    (not json_export_map.get('validation_enabled') or is_valid(datajson_entry)):
+                                output.append(datajson_entry)
+                        else:
+                            publisher = detect_publisher(extras)
+                            if errors:
+                                logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason below:\n\t%s\n",
+                                            pkg.get('id', None), pkg.get('title', None), pkg.get('organization').get('title'), errors)
+                            else:
+                                logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason above.\n",
+                                            pkg.get('id', None), pkg.get('title', None), pkg.get('organization').get('title'))
+                    if 'datajson' == export_type:
+                        page +=1
                     else:
-                        logger.warn("Dataset id=[%s], title=[%s], organization=[%s] omitted, reason above.\n",
-                                    pkg.get('id', None), pkg.get('title', None), publisher)
-
-            data = Package2Pod.wrap_json_catalog(output, json_export_map)
+                        break
+            else:
+                break
+        data = Package2Pod.wrap_json_catalog(output, json_export_map)
     except Exception as e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         filename = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
@@ -228,10 +200,7 @@ def make_json(export_type='datajson', owner_org=None):
     stream.close()
 
     # Skip compression if we export whole /data.json catalog
-    if 'datajson' == export_type:
-        return data
-
-    return write_zip(data, error, errors_json, zip_name=export_type)
+    return data
 
 
 def get_packages(owner_org, with_private=True):
@@ -347,10 +316,11 @@ def validator():
         c.source_url = request.POST["url"]
         c.errors = []
 
-        import urllib.request
-        import urllib.parse
-        import urllib.error
         import json
+        import urllib.error
+        import urllib.parse
+        import urllib.request
+
         from .datajsonvalidator import do_validation
 
         body = None
@@ -377,36 +347,11 @@ def validator():
     return render('datajsonvalidator.html')
 
 
-def _get_ckan_datasets(org=None, with_private=False):
-    n = 500
-    page = 1
-    dataset_list = []
-
-    q = '+capacity:public' if not with_private else '*:*'
-
-    fq = 'dataset_type:dataset'
-    if org:
-        fq += " AND organization:" + org
-
-    while True:
-        search_data_dict = {
-            'q': q,
-            'fq': fq,
-            'sort': 'metadata_modified desc',
-            'rows': n,
-            'start': n * (page - 1),
-        }
-
-        query = p.toolkit.get_action('package_search')({}, search_data_dict)
-        if len(query['results']):
-            dataset_list.extend(query['results'])
-            page += 1
-        else:
-            break
-    return dataset_list
+def test_for_gil():
+    logger.info('\n\n\n\n\n\n\n GIL TESTED HERE \n\n\n\n\n\n\n')
 
 
-datapusher.add_url_rule('/data.json',
+datapusher.add_url_rule('/internal/data.json',
                         view_func=generate_json)
 datapusher.add_url_rule('/organization/<org_id>/data.json',
                         view_func=generate_org_json)
@@ -418,3 +363,4 @@ datapusher.add_url_rule('/organization/<org_id>/draft.json',
                         view_func=generate_draft)
 datapusher.add_url_rule("/pod/validate",
                         view_func=validator)
+datapusher.add_url_rule("/test/gil", view_func=test_for_gil)

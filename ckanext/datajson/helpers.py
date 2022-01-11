@@ -1,19 +1,17 @@
-from builtins import str
-from builtins import map
-from builtins import range
-from builtins import object
+from builtins import map, object, range, str
+
 try:
     from collections import OrderedDict  # 2.7
 except ImportError:
     from sqlalchemy.util import OrderedDict
 
 import logging
+import re
 
-from ckan.plugins.toolkit import config
+import simplejson as json
 from ckan import plugins as p
 from ckan.lib import helpers as h
-import re
-import simplejson as json
+from ckan.plugins.toolkit import config
 
 REDACTED_REGEX = re.compile(
     r'^(\[\[REDACTED).*?(\]\])$'
@@ -112,7 +110,7 @@ def strip_if_string(val):
     return val
 
 
-def get_export_map_json():
+def get_export_map_json(map_filename):
     """
     Reading json export map from file
     :param map_filename: str
@@ -167,6 +165,7 @@ def get_validator(schema_type="federal-v1.1"):
     :return: obj
     """
     import os
+
     from jsonschema import Draft4Validator, FormatChecker
 
     schema_path = os.path.join(os.path.dirname(__file__), 'pod_schema', schema_type, 'dataset.json')
@@ -200,8 +199,8 @@ class PackageExtraCache(object):
         pass
 
     def store(self, package):
-        import sys
         import os
+        import sys
 
         try:
             self.pid = package.get('id')

@@ -1,10 +1,12 @@
 from __future__ import absolute_import
+
 from future import standard_library
+
 standard_library.install_aliases()
 
-import ckan.plugins as p
 import re
 
+import ckan.plugins as p
 
 from . import blueprint
 
@@ -25,15 +27,14 @@ class DataJsonPlugin(p.SingletonPlugin):
         # is called before after_map, in which we need the configuration directives
         # to know how to set the paths.
 
-        # TODO commenting out enterprise data inventory for right now
-        # DataJsonPlugin.route_edata_path = config.get("ckanext.enterprisedatajson.path", "/enterprisedata.json")
         DataJsonPlugin.route_enabled = config.get("ckanext.datajson.url_enabled", "True") == 'True'
-        DataJsonPlugin.route_path = config.get("ckanext.datajson.path", "/data.json")
+        DataJsonPlugin.route_path = config.get("ckanext.datajson.path", "/internal/data.json")
         DataJsonPlugin.route_ld_path = config.get("ckanext.datajsonld.path",
-                                                  re.sub(r"\.json$", ".jsonld", DataJsonPlugin.route_path))
+                                                re.sub(r"\.json$", ".jsonld", DataJsonPlugin.route_path))
         DataJsonPlugin.ld_id = config.get("ckanext.datajsonld.id", config.get("ckan.site_url"))
         DataJsonPlugin.ld_title = config.get("ckan.site_title", "Catalog")
         DataJsonPlugin.site_url = config.get("ckan.site_url")
+        DataJsonPlugin.schema_type = config.get("ckanext.datajson.schema_type", "federal-v1.1")
 
         DataJsonPlugin.inventory_links_enabled = config.get("ckanext.datajson.inventory_links_enabled",
                                                             "False") == 'True'
@@ -80,6 +81,8 @@ class DataJsonPlugin(p.SingletonPlugin):
     #               controller='ckanext.datajson.plugin:DataJsonController', action='validator')
 
     #     return m
+    
+    
 
     def get_blueprint(self):
         return blueprint.datapusher
