@@ -4,7 +4,7 @@ rfc3987
 future
 
 # ckanext-harvest
--e git+https://github.com/ckan/ckanext-harvest.git#egg=ckanext-harvest
+-e git+https://github.com/ckan/ckanext-harvest.git@89b1a322acfcdabdf3274d3c47dd95291c9c5427#egg=ckanext-harvest
 ckantoolkit==0.0.3
 pika>=1.1.0
 pyOpenSSL==18.0.0

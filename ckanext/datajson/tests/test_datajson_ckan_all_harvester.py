@@ -3,6 +3,7 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import object
 from datetime import datetime
+import time
 import json
 import logging
 import six
@@ -14,6 +15,7 @@ from urllib.error import URLError
 import ckan.plugins as p
 import ckanext.harvest.model as harvest_model
 import ckanext.harvest.queue as queue
+import ckanext.harvest.utils as utils
 from . import mock_datajson_source
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
@@ -200,6 +202,24 @@ class TestDataJSONHarvester(object):
         tags = [tag.name for tag in dataset.get_tags()]
         assert munge_title_to_name("ORNL") in tags
         assert len(dataset.resources) == 1
+    
+    def test_datason_arm_reharvest(self):
+        url = 'http://127.0.0.1:%s/arm' % self.mock_port
+        datasets = self.run_source(url=url)
+        # Mark harvest job as complete
+        # utils.run_harvester()
+        # fake job status before final RUN command.
+        context = {'model': model, 'user': self.user['name'], 'session': model.Session}
+        self.job.status = u'Running'
+        self.job.gather_finished = datetime.utcnow()
+        self.job.save()
+
+        p.toolkit.get_action('harvest_jobs_run')(context, {'source_id': self.source.id})
+
+        # Re-run job to check update logic
+        datasets = self.run_source(url=url)
+        # Assert no datasets were changed
+        assert datasets == []
 
     def test_datason_usda(self):
         url = 'http://127.0.0.1:%s/usda' % self.mock_port

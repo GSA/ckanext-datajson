@@ -4,7 +4,7 @@ from builtins import zip
 from builtins import str
 from ckan import model
 from ckan import plugins as p
-from ckan.model import Session, Package
+from ckan.model import Session, Package, PackageExtra
 from ckan.logic import NotFound, get_action
 from ckan.logic.validators import name_validator
 from ckan.lib.munge import munge_title_to_name
@@ -25,6 +25,7 @@ from jsonschema.validators import Draft4Validator
 from jsonschema import FormatChecker
 
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 
 import logging
 log = logging.getLogger(__name__)
@@ -159,18 +160,31 @@ class DatasetHarvesterBase(HarvesterBase):
         # Added: mark all existing parent datasets.
         existing_datasets = {}
         existing_parents = {}
-        for hobj in model.Session.query(HarvestObject).filter_by(source=harvest_job.source, current=True):
+        
+        # Get list of package info for each harvest object
+        packages = 
+
+        # Roll up the package extras into a single object
+        rolled_packages = {}
+        for obj in packages:
+            if(obj[0] not in rolled_packages):
+                print(dir(obj[1]))
+                rolled_packages[obj[0]] = {"package": obj[1].as_dict()}
+            rolled_packages[obj[0]][obj[2].key] = obj[2].value
+        
+        for pkg in model.Session.query(HarvestObject.package_id, Package)\
+            .filter_by(source=harvest_job.source, current=True)\
+            .join(Package, HarvestObject.package_id == Package.id):
+            print(pkg)
+            sid = pkg["identifier"]
             try:
-                pkg = get_action('package_show')(self.context(), {"id": hobj.package_id})
-            except Exception:
-                # reference is broken
-                continue
-            sid = self.find_extra(pkg, "identifier")
-            is_parent = self.find_extra(pkg, "collection_metadata")
+                is_parent = pkg["collection_metadata"]
+            except KeyError:
+                is_parent = None
             if sid:
-                existing_datasets[sid] = pkg
-            if is_parent and pkg.get("state") == "active":
-                existing_parents[sid] = pkg
+                existing_datasets[sid] = package_values
+            if is_parent and package_values["state"] == "active":
+                existing_parents[sid] = package_values
 
         # which parent has been demoted to child level?
         existing_parents_demoted = set(
@@ -235,13 +249,13 @@ class DatasetHarvesterBase(HarvesterBase):
                 # We store a hash of the dict associated with this dataset
                 # in the package so we can avoid updating datasets that
                 # don't look like they've changed.
-                if pkg.get("state") == "active" \
+                if pkg["state"] == "active" \
                         and dataset['identifier'] not in existing_parents_demoted \
                         and dataset['identifier'] not in existing_datasets_promoted \
-                        and self.find_extra(pkg, "source_hash") == self.make_upstream_content_hash(dataset,
-                                                                                                   source,
-                                                                                                   catalog_extras,
-                                                                                                   schema_version):
+                        and pkg["source_hash"] == self.make_upstream_content_hash(dataset,
+                                                                                  source,
+                                                                                  catalog_extras,
+                                                                                  schema_version):
                     log.info('SKIP: {}'.format(dataset['identifier']))
                     continue
             else:
@@ -289,11 +303,10 @@ class DatasetHarvesterBase(HarvesterBase):
                 continue  # was just updated
             if pkg.get("state") == "deleted":
                 continue  # already deleted
-            pkg["state"] = "deleted"
             log.warn('deleting package %s (%s) because it is no longer in %s' % (pkg["name"],
                                                                                  pkg["id"],
                                                                                  harvest_job.source.url))
-            get_action('package_update')(self.context(), pkg)
+            get_action('package_delete')(self.context(), pkg)
             obj = HarvestObject(guid=pkg_id,
                                 package_id=pkg["id"],
                                 job=harvest_job, )
