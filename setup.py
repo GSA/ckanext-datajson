@@ -10,7 +10,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='ckanext-datajson',
-    version='0.1.1',
+    version='0.1.2',
     description="CKAN extension to generate /data.json",
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -28,10 +28,11 @@ setup(
     zip_safe=False,
     install_requires=[
         # -*- Extra requirements: -*-
-        'pyyaml',
-        'jsonschema~=2.4.0',
-        'rfc3987',
         'future'
+        'jsonschema~=2.4.0',
+        'lepl',
+        'pyyaml',
+        'rfc3987',
     ],
     setup_requires=['wheel'],
     entry_points="""
