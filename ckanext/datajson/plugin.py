@@ -52,6 +52,7 @@ class DataJsonPlugin(p.SingletonPlugin):
 class DataJsonValidatorPlugin(p.SingletonPlugin):
     p.implements(p.interfaces.IConfigurer)
     p.implements(p.IBlueprint)
+    p.implements(p.interfaces.IRoutes, inherit=True)
 
     def update_config(self, config):
         p.toolkit.add_template_directory(config, "templates_validator")
