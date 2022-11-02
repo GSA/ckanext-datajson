@@ -275,6 +275,8 @@ class DatasetHarvesterBase(HarvesterBase):
             elif dataset.get('isPartOf'):
                 is_part_of = dataset.get('isPartOf')
                 existing_parent = existing_parents.get(is_part_of, None)
+                # We should NEVER change the data like this as it's being gathered/imported
+                # Why do we need the CKAN ID, isn't the unique identifier good enough?
                 if existing_parent is None:  # maybe the parent is not harvested yet
                     parent_pkg_id = 'IPO:{}'.format(is_part_of)
                 else:
@@ -390,6 +392,10 @@ class DatasetHarvesterBase(HarvesterBase):
 
         return harvest_object.source.id if harvest_object else None
 
+    # Why do we need this? Shouldn't the isPartOf field be validated as
+    # part of the validation step, and not on import?
+    # Can we write some sort of post-harvest check to add errors if items
+    # are harvested without their parent?
     def is_part_of_to_package_id(self, ipo, harvest_object):
         """ Get an identifier from external source using isPartOf
             and returns the parent dataset or raises an ParentNotHarvestedException.

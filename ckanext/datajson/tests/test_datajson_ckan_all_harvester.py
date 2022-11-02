@@ -34,6 +34,7 @@ class TestDataJSONHarvester(object):
         log.info('Starting mock http server')
         cls.mock_port = 8961
         mock_datajson_source.serve(cls.mock_port)
+        cls.source = None
 
     @classmethod
     def setup(cls):
@@ -212,6 +213,14 @@ class TestDataJSONHarvester(object):
         datasets = self.run_source(url=url)
         # Assert no datasets were changed
         assert datasets == []
+    
+    def test_datason_unique_identifier_http(self):
+        url = 'http://127.0.0.1:%s/unique-identifier-http' % self.mock_port
+        # We may need to run the gather manually here, so that we can
+        # force the sub item to be harvested before the parent item
+        # and confirm our current bug is fixed.
+        datasets = self.run_source(url=url)
+        # Verify that the dataset and sub were both harvested
 
     def test_datason_usda(self):
         url = 'http://127.0.0.1:%s/usda' % self.mock_port
