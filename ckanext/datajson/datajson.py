@@ -462,8 +462,10 @@ class DatasetHarvesterBase(HarvesterBase):
                     try:
                         parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
                         parent_pkg_id = parent['id']
+                    except ParentNotHarvestedException:
+                        pass
                     except BaseException as e:
-                        self._save_object_error(e.error, harvest_object, 'Import')
+                        self._save_object_error(e, harvest_object, 'Import')
 
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
