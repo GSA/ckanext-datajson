@@ -114,7 +114,7 @@ class DatasetHarvesterBase(HarvesterBase):
         # Start gathering.
         try:
             source_datasets, catalog_values = self.load_remote_catalog(harvest_job)
-        except ValueError as e:
+        except BaseException as e:
             self._save_gather_error("Error loading json content: %s." % (e), harvest_job)
             return []
 
@@ -459,8 +459,11 @@ class DatasetHarvesterBase(HarvesterBase):
 
                     #  check if parent is already harvested
                     parent_identifier = parent_pkg_id.replace('IPO:', '')
-                    parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
-                    parent_pkg_id = parent['id']
+                    try:
+                        parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
+                        parent_pkg_id = parent['id']
+                    except BaseException as e:
+                        self._save_object_error(e.error, harvest_object, 'Import')
 
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
