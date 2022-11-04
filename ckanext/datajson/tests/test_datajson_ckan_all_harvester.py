@@ -379,6 +379,7 @@ class TestDataJSONHarvester(object):
         r2 = json.dumps({"harvest_object_id": self.harvest_objects[0].id})
         r0 = FakeMethod(r2)
         queue.fetch_callback(consumer_fetch, r0, None, r2)
+        queue.fetch_callback(consumer_fetch, r0, None, r2)
         assert self.harvest_objects[0].state == "COMPLETE"
 
         # Check status on harvest objects
