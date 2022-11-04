@@ -369,8 +369,7 @@ class TestDataJSONHarvester(object):
         # first a child and assert to get an error
         r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
         r0 = FakeMethod(r2)
-        with pytest.raises(ParentNotHarvestedException):
-            queue.fetch_callback(consumer_fetch, r0, None, r2)
+        queue.fetch_callback(consumer_fetch, r0, None, r2)
         assert self.harvest_objects[1].retry_times == 1
         assert self.harvest_objects[1].state == "ERROR"
 
