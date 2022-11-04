@@ -369,8 +369,11 @@ class TestDataJSONHarvester(object):
         # first a child and assert to get an error
         r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
         r0 = FakeMethod(r2)
+        # Note: This was originally testing something different.
+        # Because the harvester does not hard-fail on this case anymore,
+        # the test was changed
         queue.fetch_callback(consumer_fetch, r0, None, r2)
-        assert self.harvest_objects[1].retry_times == 1
+        assert self.harvest_objects[1].retry_times == 0
         assert self.harvest_objects[1].state == "ERROR"
 
         # run the parent later, like in a different queue
