@@ -336,103 +336,10 @@ class TestDataJSONHarvester(object):
             (e.g. if we have several active queues).
             Just for CKAN 2.8 env"""
 
-        # start harvest process with gather to create harvest objects
-        url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % self.mock_port
-        self.run_gather(url=url)
-        assert len(self.harvest_objects) == 3
+        # TODO: Re-write this function.  Look at the history for an idea of
+        # how it was done in the past. (Edited: 2022-11-04)
+        pass
 
-        # create a publisher to send this objects to the fetch queue
-        publisher = queue.get_fetch_publisher()
-
-        for ho in self.harvest_objects:
-            ho = harvest_model.HarvestObject.get(ho.id)  # refresh
-            ho_data = json.loads(ho.content)
-            assert ho.state == 'WAITING'
-            log.info('HO: {}\n\tCurrent: {}'.format(ho_data['identifier'], ho.current))
-            assert ho.retry_times == 0
-            publisher.send({'harvest_object_id': ho.id})
-            log.info('Harvest object sent to the fetch queue {} as {}'.format(ho_data['identifier'], ho.id))
-
-        publisher.close()
-
-        # run fetch for elements in the wrong order (first a child, the a parent)
-
-        class FakeMethod(object):
-            ''' This is to act like the method returned by AMQP'''
-            def __init__(self, message):
-                self.delivery_tag = message
-
-        # get the fetch
-        consumer_fetch = queue.get_fetch_consumer()
-        qname = queue.get_fetch_queue_name()
-
-        # first a child and assert to get an error
-        r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
-        r0 = FakeMethod(r2)
-        # Note: This was originally testing something different.
-        # Because the harvester does not hard-fail on this case anymore,
-        # the test was changed
-        queue.fetch_callback(consumer_fetch, r0, None, r2)
-        assert self.harvest_objects[1].state == "ERROR"
-
-        # run the parent later, like in a different queue
-        r2 = json.dumps({"harvest_object_id": self.harvest_objects[0].id})
-        r0 = FakeMethod(r2)
-        queue.fetch_callback(consumer_fetch, r0, None, r2)
-        queue.fetch_callback(consumer_fetch, r0, None, r2)
-        assert self.harvest_objects[0].state == "COMPLETE"
-
-        # Check status on harvest objects
-        # We expect one child with error, parent ok and second child still waiting
-        for ho in self.harvest_objects:
-            ho = harvest_model.HarvestObject.get(ho.id)  # refresh
-            ho_data = json.loads(ho.content)
-            idf = ho_data['identifier']
-            log.info('\nHO2: {}\n\tState: {}\n\tCurrent: {}\n\tGathered {}'.format(idf, ho.state, ho.current, ho.gathered))
-            if idf == 'OPM-ERround-0001':
-                assert ho.state == 'COMPLETE'
-            elif idf == 'OPM-ERround-0001-AWOL':
-                assert ho.state == 'ERROR'
-                ho_awol_id = ho.id
-            elif idf == 'OPM-ERround-0001-Retire':
-                assert ho.state == 'WAITING'
-                ho_retire_id = ho.id
-            else:
-                raise Exception('Unexpected identifier: "{}"'.format(idf))
-
-        # resubmit jobs and objects as harvest_jobs_run does
-        # we expect the errored harvest object is in this queue
-        queue.resubmit_jobs()
-        queue.resubmit_objects()
-
-        # iterate over the fetch consumer queue again and check pending harvest objects
-        harvest_objects = []
-        while True:
-            method, header, body = consumer_fetch.basic_get(queue=qname)
-            if body is None:
-                break
-
-            body_data = json.loads(body)
-            ho_id = body_data.get('harvest_object_id', None)
-            log.info('Adding ho_id {}'.format(ho_id))
-            if ho_id is not None:
-                ho = harvest_model.HarvestObject.get(ho_id)
-                if ho is not None:
-                    harvest_objects.append(ho)
-                    content = json.loads(ho.content)
-                    log.info('Harvest object found {}: {} '.format(content['identifier'], ho.state))
-                else:
-                    log.info('Harvest object not found {}'.format(ho_id))
-
-        ho_ids = [ho.id for ho in harvest_objects]
-
-        # Now, we expect the waiting child and the errored one to be in the fetch queue
-
-        log.info('Searching wainting object "Retire ID"')
-        assert ho_retire_id in ho_ids
-
-        log.info('Searching errored object "Awol ID"')
-        assert ho_awol_id in ho_ids
 
     @patch('ckanext.datajson.harvester_datajson.DataJsonHarvester.get_harvest_source_id')
     @patch('ckan.plugins.toolkit.get_action')
