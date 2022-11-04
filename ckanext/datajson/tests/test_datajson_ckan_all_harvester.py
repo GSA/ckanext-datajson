@@ -373,7 +373,6 @@ class TestDataJSONHarvester(object):
         # Because the harvester does not hard-fail on this case anymore,
         # the test was changed
         queue.fetch_callback(consumer_fetch, r0, None, r2)
-        assert self.harvest_objects[1].retry_times == 0
         assert self.harvest_objects[1].state == "ERROR"
 
         # run the parent later, like in a different queue
