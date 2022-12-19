@@ -26,6 +26,8 @@ from sqlalchemy.exc import IntegrityError
 import logging
 log = logging.getLogger(__name__)
 
+import html
+
 # watch out for these keys that their string values might go beyond Solr capacity
 # https://github.com/GSA/datagov-deploy/issues/953
 SIZE_CHECK_KEYS = ['spatial']
@@ -362,6 +364,7 @@ class DatasetHarvesterBase(HarvesterBase):
             id = "Identifier: " + (dataset.get("identifier") if dataset.get("identifier") else "Unknown")
             title = "Title: " + (dataset.get("title") if dataset.get("title") else "Unknown")
             msg = id + "; " + title + "; " + str(count) + " Error(s) Found. " + msg + "."
+            html.unescape(msg)
         return msg
 
     # make ValidationError readable.
