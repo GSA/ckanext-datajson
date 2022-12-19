@@ -364,7 +364,7 @@ class DatasetHarvesterBase(HarvesterBase):
             id = "Identifier: " + (dataset.get("identifier") if dataset.get("identifier") else "Unknown")
             title = "Title: " + (dataset.get("title") if dataset.get("title") else "Unknown")
             msg = id + "; " + title + "; " + str(count) + " Error(s) Found. " + msg + "."
-            html.unescape(msg)
+            msg = html.unescape(msg)
         return msg
 
     # make ValidationError readable.
