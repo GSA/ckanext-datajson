@@ -358,6 +358,7 @@ class DatasetHarvesterBase(HarvesterBase):
         count = 0
         for error in errors:
             count += 1
+            # error_text = html.unescape(json.dumps(self._validate_readable_msg(error)))
             msg = msg + " ### ERROR #" + str(count) + ": " + self._validate_readable_msg(error) + "; "
         msg = msg.strip("; ")
         if msg:
