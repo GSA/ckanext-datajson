@@ -358,20 +358,21 @@ class DatasetHarvesterBase(HarvesterBase):
         count = 0
         for error in errors:
             count += 1
-            # error_text = html.unescape(json.dumps(self._validate_readable_msg(error)))
+            # error_text = html.unescape(json.dumps(error))
+            # msg = msg + " ### ERROR #" + str(count) + ": " + self._validate_readable_msg(error_text) + "; "
             msg = msg + " ### ERROR #" + str(count) + ": " + self._validate_readable_msg(error) + "; "
         msg = msg.strip("; ")
         if msg:
             id = "Identifier: " + (dataset.get("identifier") if dataset.get("identifier") else "Unknown")
             title = "Title: " + (dataset.get("title") if dataset.get("title") else "Unknown")
             msg = id + "; " + title + "; " + str(count) + " Error(s) Found. " + msg + "."
-            msg = html.unescape(msg)
+            msg = msg.replace('&#34;', '"')
+            msg = msg.replace("&#39;", "'")
         return msg
 
     # make ValidationError readable.
     def _validate_readable_msg(self, e):
         msg = e.message.replace("u'", "'")
-        msg = json.dumps(msg)
         elem = ""
         try:
             if e.schema_path[0] == 'properties':
