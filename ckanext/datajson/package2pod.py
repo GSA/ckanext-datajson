@@ -377,7 +377,9 @@ class Wrappers(object):
         arr = []
         package = Wrappers.pkg
 
+        log.error('##### start debugging ######')
         distribution_map = Wrappers.full_field_map.get('distribution').get('map')
+        log.error(f'distribution_map : {distribution_map}')
         if not distribution_map or 'resources' not in package:
             return arr
 
@@ -386,12 +388,14 @@ class Wrappers(object):
 
             for pod_key, json_map in distribution_map.items():
                 value = helpers.strip_if_string(r.get(json_map.get('field'), json_map.get('default')))
-
+                log.error(f'value1 : {value}')
                 if Wrappers.redaction_enabled:
                     if 'redacted_' + json_map.get('field') in r and r.get('redacted_' + json_map.get('field')):
                         value = Package2Pod.mask_redacted(value, r.get('redacted_' + json_map.get('field')))
+                        log.error(f'value2 : {value}')
                 else:
                     value = Package2Pod.filter(value)
+                    log.error(f'value3 : {value}')
 
                 # filtering/wrapping if defined by export_map
                 wrapper = json_map.get('wrapper')
@@ -405,17 +409,22 @@ class Wrappers(object):
 
             # inventory rules
             res_url = helpers.strip_if_string(r.get('url'))
+            log.error(f'res_url1 : {res_url}')
             if Wrappers.redaction_enabled:
                 if 'redacted_url' in r and r.get('redacted_url'):
                     res_url = '[[REDACTED-EX ' + r.get('redacted_url') + ']]'
+                    log.error(f'res_url2 : {res_url}')
             else:
                 res_url = Package2Pod.filter(res_url)
+                log.error(f'res_url3 : {res_url}')
 
             if res_url:
                 res_url = res_url.replace('http://[[REDACTED', '[[REDACTED')
                 res_url = res_url.replace('http://http', 'http')
+                log.error(f'res_url3 : {res_url}')
                 if r.get('resource_type') in ['api', 'accessurl']:
                     resource['accessURL'] = res_url
+                    log.error(f'resource1 : {resource}')
                     if 'mediaType' in resource:
                         resource.pop('mediaType')
                 else:
@@ -424,6 +433,7 @@ class Wrappers(object):
                     resource['downloadURL'] = res_url
                     if 'mediaType' not in resource:
                         log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))
+                    log.error(f'resource2 : {resource}')
             else:
                 log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
