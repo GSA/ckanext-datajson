@@ -401,8 +401,11 @@ class Wrappers(object):
                 wrapper = json_map.get('wrapper')
                 if wrapper:
                     method = getattr(Wrappers, wrapper)
+                    log.error(f'method1 : {method}')
                     if method:
+                        log.error(f'value100 : {value}')
                         value = method(value)
+                        log.error(f'value101 : {value}')
 
                 if value:
                     resource[pod_key] = value
