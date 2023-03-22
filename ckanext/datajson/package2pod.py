@@ -405,7 +405,7 @@ class Wrappers(object):
                     if method:
                         log.error(f'value100 : {value}')
                         value = method(value)
-                        log.error(f'va  lue101 : {value}')
+                        log.error(f'value101 : {value}')
 
                 if value:
                     resource[pod_key] = value
@@ -496,6 +496,8 @@ class Wrappers(object):
             log.error(f'formats[format_clean]: {formats[format_clean]}')
             mime_type = formats[format_clean][0]
             log.error(f'mime_type: {mime_type}')
+            mime_type = mime_type if mime_type else 'application/octet-stream'
+            log.error(f'mime_type after: {mime_type}')
         else:
             mime_type = value
         msg = value + ' ... BECOMES ... ' + mime_type
