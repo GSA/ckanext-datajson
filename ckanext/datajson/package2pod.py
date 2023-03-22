@@ -405,7 +405,7 @@ class Wrappers(object):
                     if method:
                         log.error(f'value100 : {value}')
                         value = method(value)
-                        log.error(f'value101 : {value}')
+                        log.error(f'va  lue101 : {value}')
 
                 if value:
                     resource[pod_key] = value
@@ -490,9 +490,12 @@ class Wrappers(object):
         if not value:
             return value
         formats = h.resource_formats()
+        log.error(f'formats: {formats}')
         format_clean = value.lower()
         if format_clean in formats:
+            log.error(f'formats[format_clean]: {formats[format_clean]}')
             mime_type = formats[format_clean][0]
+            log.error(f'mime_type: {mime_type}')
         else:
             mime_type = value
         msg = value + ' ... BECOMES ... ' + mime_type
