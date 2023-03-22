@@ -140,8 +140,12 @@ class Package2Pod(object):
                 if wrapper:
                     # log.debug('wrapper: %s', wrapper)
                     method = getattr(Wrappers, wrapper)
+                    log.error(method)
                     if method:
                         Wrappers.current_field_map = field_map
+                        log.error('####### testing ########')
+                        log.error(dataset)
+                        log.error(key)
                         dataset[key] = method(dataset.get(key, ""))
 
             # CKAN doesn't like empty values on harvest, let's get rid of them
