@@ -185,6 +185,20 @@ def get_extra(package, key, default=None):
     """
     return packageExtraCache.get(package, key, default)
 
+def get_additional_formats():
+    import os
+    format_file_path = os.path.join(os.path.dirname(__file__), 'resources', 'additional_resource_formats.json')
+    resource_formats = {}
+    with open(format_file_path, encoding='utf-8') as format_file:
+        file_resource_formats = json.loads(format_file.read())
+        for format_line in file_resource_formats:
+            if format_line[0] == '_comment':
+                continue
+            line = [format_line[2], format_line[0], format_line[1]]
+            resource_formats[format_line[0].lower()] = line
+
+    return resource_formats
+
 
 class PackageExtraCache(object):
     def __init__(self):
