@@ -490,6 +490,7 @@ class Wrappers(object):
         if not value:
             return value
         formats = h.resource_formats()
+        formats.update(helpers.get_additional_formats())
         log.error(f'formats: {formats}')
         format_clean = value.lower()
         if format_clean in formats:
