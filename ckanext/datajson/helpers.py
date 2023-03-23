@@ -185,6 +185,7 @@ def get_extra(package, key, default=None):
     """
     return packageExtraCache.get(package, key, default)
 
+
 def get_additional_formats():
     import os
     format_file_path = os.path.join(os.path.dirname(__file__), 'resources', 'additional_resource_formats.json')
