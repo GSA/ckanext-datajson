@@ -11,7 +11,6 @@ from . import mock_datajson_source
 from ckan import model
 from ckan.lib.munge import munge_title_to_name
 from ckanext.datajson.harvester_datajson import DataJsonHarvester
-from ckanext.datajson.exceptions import ParentNotHarvestedException
 from .factories import HarvestJobObj, HarvestSourceObj
 from mock import Mock, patch
 
@@ -382,8 +381,7 @@ class TestDataJSONHarvester(object):
         # first a child and assert to get an error
         r2 = json.dumps({"harvest_object_id": self.harvest_objects[1].id})
         r0 = FakeMethod(r2)
-        with pytest.raises(ParentNotHarvestedException):
-            queue.fetch_callback(consumer_fetch, r0, None, r2)
+        queue.fetch_callback(consumer_fetch, r0, None, r2)
         assert self.harvest_objects[1].retry_times == 1
         assert self.harvest_objects[1].state == "ERROR"
 
@@ -476,8 +474,7 @@ class TestDataJSONHarvester(object):
         harvest_object.source = harvest_source
 
         harvester = DataJsonHarvester()
-        with pytest.raises(ParentNotHarvestedException):
-            harvester.is_part_of_to_package_id('custom-identifier', harvest_object)
+        assert harvester.is_part_of_to_package_id('custom-identifier', harvest_object) is None
 
         assert mock_get_action.called
 
@@ -557,8 +554,7 @@ class TestDataJSONHarvester(object):
         mock_get_action.side_effect = get_action
 
         harvester = DataJsonHarvester()
-        with pytest.raises(ParentNotHarvestedException):
-            harvester.is_part_of_to_package_id('identifier', None)
+        assert harvester.is_part_of_to_package_id('identifier', None) is None
 
     def test_datajson_is_part_of_package_id(self):
         url = 'http://127.0.0.1:%s/collection-1-parent-2-children.data.json' % self.mock_port
@@ -575,11 +571,9 @@ class TestDataJSONHarvester(object):
                 assert dataset['title'] == 'Employee Relations Roundtables'
 
             if content['identifier'] in ['OPM-ERround-0001-AWOL', 'OPM-ERround-0001-Retire']:
-                with pytest.raises(ParentNotHarvestedException):
-                    self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object)
+                assert self.harvester.is_part_of_to_package_id(content['identifier'], harvest_object) is None
 
-        with pytest.raises(ParentNotHarvestedException):
-            self.harvester.is_part_of_to_package_id('bad identifier', harvest_object)
+        assert self.harvester.is_part_of_to_package_id('bad identifier', harvest_object) is None
 
     def test_datajson_non_federal(self):
         """ validate we get the coinfig we sent """
