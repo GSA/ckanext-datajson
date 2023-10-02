@@ -509,7 +509,7 @@ class DatasetHarvesterBase(HarvesterBase):
                     if parent is not None:
                         parent_pkg_id = parent['id']
                     else:
-                        parent_pkg_id = None
+                        return None
 
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
