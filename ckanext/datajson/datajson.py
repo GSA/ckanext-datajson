@@ -11,7 +11,7 @@ from ckan.lib.search import rebuild
 
 from ckanext.harvest.model import HarvestObject, HarvestObjectError, HarvestObjectExtra
 from ckanext.harvest.harvesters.base import HarvesterBase
-from ckanext.datajson.exceptions import ParentNotHarvestedException
+# from ckanext.datajson.exceptions import ParentNotHarvestedException
 import uuid
 import hashlib
 import json
