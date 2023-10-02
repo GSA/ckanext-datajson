@@ -2,8 +2,6 @@ from datetime import datetime
 import json
 import logging
 
-import pytest
-
 import ckan.plugins as p
 import ckanext.harvest.model as harvest_model
 import ckanext.harvest.queue as queue
