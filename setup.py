@@ -10,8 +10,8 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='ckanext-datajson',
-    version='0.1.24',
-    description="CKAN extension to generate /data.json",
+    version='0.1.25',
+    description='CKAN extension to generate /data.json',
     long_description=long_description,
     long_description_content_type='text/markdown',
     classifiers=[
