@@ -9,7 +9,7 @@ from ckan.lib.navl.dictization_functions import Invalid, DataError
 from ckan.lib.navl.validators import ignore_empty, unicode_only
 from ckan.lib.search import rebuild
 
-from ckanext.harvest.model import HarvestObject, HarvestObjectError, HarvestObjectExtra
+from ckanext.harvest.model import HarvestObject, HarvestObjectExtra
 from ckanext.harvest.harvesters.base import HarvesterBase
 from ckanext.datajson.exceptions import ParentNotHarvestedException
 import uuid
@@ -458,14 +458,7 @@ class DatasetHarvesterBase(HarvesterBase):
         # we have 0 o bad results
         msg = 'Parent identifier not found: "{}"'.format(ipo)
         log.error(msg)
-        try:
-            harvest_object_error = HarvestObjectError(message=msg, object=harvest_object)
-            harvest_object_error.save()
-            harvest_object.state = "ERROR"
-            harvest_object.save()
-        except Exception:
-            pass
-        raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
+        raise ParentNotHarvestedException('Unable to find parent dataset.')
 
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
@@ -501,7 +494,11 @@ class DatasetHarvesterBase(HarvesterBase):
 
                     #  check if parent is already harvested
                     parent_identifier = parent_pkg_id.replace('IPO:', '')
-                    parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
+                    try:
+                        parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
+                    except ParentNotHarvestedException as e:
+                        self._save_object_error(str(e), harvest_object, 'Import')
+                        return None
                     parent_pkg_id = parent['id']
 
             if extra.key.startswith('catalog_'):
