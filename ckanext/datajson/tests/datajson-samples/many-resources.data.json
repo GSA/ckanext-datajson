@@ -1,0 +1,118 @@
+{
+  "conformsTo": "https://project-open-data.cio.gov/v1.1/schema",
+  "describedBy": "https://project-open-data.cio.gov/v1.1/schema/catalog.json",
+  "@context": "https://project-open-data.cio.gov/v1.1/schema/catalog.jsonld",
+  "@type": "dcat:Catalog",
+  "dataset": [
+      {
+          "@type": "dcat:Dataset",
+          "title": "Many Resources",
+          "description": "range of topics of interest for this community. These training opportunities are interactive and allow the participants to ask questions of the presenters. This presentation covers Absence Without Leave (AWOL) and various aspects of handling leave abuse from placing an employee on leave restriction to taking a disciplinary or adverse action.  The session also contains federal case law regarding this topic.",
+          "modified": "2011-12-15",
+          "accessLevel": "public",
+          "identifier": "OPM-ERround-0001-AWOL",
+          "landingPage": "http://www.opm.gov/policy-data-oversight/employee-relations/training/#url=Roundtables",
+          "license": "http://www.usa.gov/publicdomain/label/1.0/",
+          "publisher": {
+              "@type": "org:Organization",
+              "name": "U.S. Office of Personnel Management"
+          },
+          "contactPoint": {
+              "@type": "vcard:Contact",
+              "fn": "LaShann Freeman",
+              "hasEmail": "mailto:lashann.freeman@opm.gov"
+          },
+          "distribution": [
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/1"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/2"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/3"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/4"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/5"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/6"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/7"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/8"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/9"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "mediaType": "application/pdf",
+                  "title": "Addressing AWOL",
+                  "downloadURL": "http://www.opm.gov/10"
+              },
+              {
+                  "@type": "dcat:Distribution",
+                  "accessURL": "https://www.youtube.com/watch?v=08bK8zHH9No",
+                  "format": "video",
+                  "title": "Addressing AWOL"
+              }
+          ],
+          "keyword": [
+              "AWOL",
+              "Absence without Leave",
+              "LWOP",
+              "Leave without Pay",
+              "disciplinary procedures",
+              "employee relations",
+              "leave abuse",
+              "leave restriction",
+              "practitioners",
+              "roundtables",
+              "training",
+              "webcast"
+          ],
+          "bureauCode": [
+              "027:00"
+          ],
+          "programCode": [
+              "027:000"
+          ],
+          "language": [
+              "en-US"
+          ]
+      }
+  ]
+}

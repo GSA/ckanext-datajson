@@ -613,6 +613,16 @@ class TestDataJSONHarvester(object):
                 parent = model.Package.get(parent_package_id)
                 assert parent.title == 'Employee Relations Roundtables 2'
 
+    @pytest.mark.ckan_config('ckanext.datajson.max_resource_count', 10)
+    def test_too_many_resources(self):
+        url = 'http://127.0.0.1:%s/many-resources' % self.mock_port
+        self.run_source(url=url)
+        errors = self.errors
+        expected_error_stage = "Import"
+        assert errors[0].stage == expected_error_stage
+        expected_error_message = "Too many resources. Maximum allowed is 10. Actual size is 11."
+        assert errors[0].message == expected_error_message
+
     def test_datajson_reserverd_word_as_title(self):
         url = 'http://127.0.0.1:%s/error-reserved-title' % self.mock_port
         self.run_source(url=url)
