@@ -67,6 +67,8 @@ To make the datajson validator route and web form available, also add:
 
 	ckan.plugins = (other plugins here...) datajson_validator
 
+[ Optional ] Set the resource count limit allowed in one record so that fetch-consumer does not run out of memory during harvesting. Default is unlimited. Once set, records with higher resource count will see import errors. 
+ `ckanext.datajson.max_resource_count = 1000`
 
 ## Development
 
