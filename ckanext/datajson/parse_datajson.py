@@ -116,6 +116,11 @@ def parse_datajson_entry(datajson, package, defaults, schema_version):
                          f'Actual size is {len(distribution)}.')
         raise DataError(error_message)
 
+
+    # get first 1000 items of distribution
+    distribution = distribution[:1000]
+
+
     datajson["distribution"] = distribution
 
     for d in datajson.get("distribution", []):
