@@ -44,4 +44,6 @@ services:
   redis:
     image: redis
   solr:
-    image: ckan/ckan-solr-dev:2.9
+    image: datagov/catalog.data.gov.solr:latest
+    ports:
+      - "8983:8983"

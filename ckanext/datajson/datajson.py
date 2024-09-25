@@ -772,7 +772,11 @@ class DatasetHarvesterBase(HarvesterBase):
             extras.append({'key': k, 'value': v})
 
         # Set specific information about the dataset.
-        self.set_dataset_info(pkg, dataset_processed, dataset_defaults, schema_version)
+        try:
+            self.set_dataset_info(pkg, dataset_processed, dataset_defaults, schema_version)
+        except DataError as e:
+            self._save_object_error(e.error, harvest_object, 'Import')
+            return None
 
         # Try to update an existing package with the ID set in harvest_object.guid. If that GUID
         # corresponds with an existing package, get its current metadata.
