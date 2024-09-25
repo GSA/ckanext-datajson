@@ -613,7 +613,7 @@ class TestDataJSONHarvester(object):
                 parent = model.Package.get(parent_package_id)
                 assert parent.title == 'Employee Relations Roundtables 2'
 
-    @pytest.mark.ckan_config('ckanext.datajson.max_resource_count', 10)
+    @pytest.mark.ckan_config('ckanext.datajson.max_resource_count', '10')
     def test_too_many_resources(self):
         url = 'http://127.0.0.1:%s/many-resources' % self.mock_port
         self.run_source(url=url)
