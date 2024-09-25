@@ -1,6 +1,6 @@
 from ckan.lib.munge import munge_title_to_name
 from ckan.lib.navl.dictization_functions import DataError
-from ckan.plugins.toolkit import config
+from ckan.plugins.toolkit import asint, config
 
 import re
 
@@ -110,7 +110,8 @@ def parse_datajson_entry(datajson, package, defaults, schema_version):
                 }
                 distribution.append(d)
 
-    max_resource_count = config.get('ckanext.datajson.max_resource_count')
+    # max_resource_count is unlimited if not set or set to 0
+    max_resource_count = asint(config.get('ckanext.datajson.max_resource_count', 0))
     if max_resource_count and len(distribution) > max_resource_count:
         error_message = (f'Too many resources. Maximum allowed is {max_resource_count}. '
                          f'Actual size is {len(distribution)}.')
