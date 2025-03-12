@@ -754,7 +754,7 @@ class DatasetHarvesterBase(HarvesterBase):
             for key in unmapped:
                 value = dataset_processed.get(key, "")
                 if value is not None:
-                    extras.append({"key": key, "value": value})
+                    extras.append({"key": key, "value": self.serialize_list_dict(value)})
 
         # if theme is geospatial/Geospatial, we tag it in metadata_type.
         themes = self.find_extra(pkg, "theme")
@@ -848,6 +848,14 @@ class DatasetHarvesterBase(HarvesterBase):
         rebuild(pkg['id'])
 
         return True
+
+    def serialize_list_dict(self, data):
+        # we need to serialize dict since CKAN/solr has issues with dict as extras value.
+        # list too, it can have a dict in it.
+        if isinstance(data, dict) or isinstance(data, list):
+            return json.dumps(data)
+        else:
+            return data
 
     def make_upstream_content_hash(self, datasetdict, harvest_source,
                                    catalog_extras, schema_version='1.0',
