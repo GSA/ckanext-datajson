@@ -6,6 +6,10 @@
   "dataset": [
     {
       "identifier": "USDA-DM-002",
+      "additionalField": "some Value",
+      "additionalFieldDict": {"a": 3},
+      "additionalFieldList": [1,2,"a"],
+      "additionalFieldListWDict": [1,2,{"a": 3}],
       "accessLevel": "public",
       "contactPoint": {
         "hasEmail": "mailto:Alexis.Graves@ocio.usda.gov",
