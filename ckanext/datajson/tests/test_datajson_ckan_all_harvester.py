@@ -225,8 +225,8 @@ class TestDataJSONHarvester(object):
         # and list and dict should be json encoded
         assert dataset.extras.get('additionalField') == "some Value"
         assert json.loads(dataset.extras.get('additionalFieldDict')) == {"a": 3}
-        assert json.loads(dataset.extras.get('additionalFieldList')) == [1,2,"a"]
-        assert json.loads(dataset.extras.get('additionalFieldListWDict')) == [1,2,{"a": 3}]
+        assert json.loads(dataset.extras.get('additionalFieldList')) == [1, 2, "a"]
+        assert json.loads(dataset.extras.get('additionalFieldListWDict')) == [1, 2, {"a": 3}]
 
     def test_source_returning_http_error(self):
         url = 'http://127.0.0.1:%s/404' % self.mock_port
