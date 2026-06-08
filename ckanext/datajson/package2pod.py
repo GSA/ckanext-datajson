@@ -419,7 +419,15 @@ class Wrappers(object):
                         resource.pop('accessURL')
                     resource['downloadURL'] = res_url
                     if 'mediaType' not in resource:
-                        log.warn("Missing mediaType for resource in package ['%s']", package.get('id'))
+                        # POD v1.1 requires a mediaType whenever a downloadURL is
+                        # present (dependencies.downloadURL.required). When the
+                        # resource format is blank we can't derive a real MIME
+                        # type, so fall back to the generic binary type. Without
+                        # this the whole dataset fails schema validation and is
+                        # silently dropped from the exported catalog.
+                        log.warn("Missing mediaType for resource in package ['%s'], "
+                                 "defaulting to application/octet-stream", package.get('id'))
+                        resource['mediaType'] = 'application/octet-stream'
             else:
                 log.warn("Missing downloadURL for resource in package ['%s']", package.get('id'))
 
