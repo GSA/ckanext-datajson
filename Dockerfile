@@ -1,7 +1,7 @@
-ARG CKAN_VERSION=2.10
-FROM openknowledge/ckan-dev:${CKAN_VERSION}
+ARG CKAN_VERSION=2.11
+FROM ckan/ckan-dev:${CKAN_VERSION}
 
-RUN apk add tzdata
+USER root
 
 COPY . $APP_DIR/
 
