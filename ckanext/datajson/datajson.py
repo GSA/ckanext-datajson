@@ -11,7 +11,7 @@ from ckan.lib.search import rebuild
 
 from ckanext.harvest.model import HarvestObject, HarvestObjectError, HarvestObjectExtra
 from ckanext.harvest.harvesters.base import HarvesterBase
-from ckanext.datajson.exceptions import ParentNotHarvestedException
+# from ckanext.datajson.exceptions import ParentNotHarvestedException
 import uuid
 import hashlib
 import json
@@ -465,7 +465,11 @@ class DatasetHarvesterBase(HarvesterBase):
             harvest_object.save()
         except Exception:
             pass
-        raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
+
+        # This 'raise' was constantly crashing our harvesting process.
+        # To better accomodate our current infrastructure, the output
+        # of this function should be validated instead.
+        # raise ParentNotHarvestedException('Unable to find parent dataset. Raising error to allow re-run later')
 
     def import_stage(self, harvest_object):
         # The import stage actually creates the dataset.
@@ -502,7 +506,10 @@ class DatasetHarvesterBase(HarvesterBase):
                     #  check if parent is already harvested
                     parent_identifier = parent_pkg_id.replace('IPO:', '')
                     parent = self.is_part_of_to_package_id(parent_identifier, harvest_object)
-                    parent_pkg_id = parent['id']
+                    if parent is not None:
+                        parent_pkg_id = parent['id']
+                    else:
+                        return None
 
             if extra.key.startswith('catalog_'):
                 catalog_extras[extra.key] = extra.value
