@@ -255,7 +255,12 @@ def get_all_group_packages(group_id, with_private=True):
     """
     result = []
 
-    for pkg_rev in model.Group.get(group_id).packages(with_private=with_private, context={'user_is_admin': True}):
+    group = model.Group.get(group_id)
+    if group is None:
+        logger.warn("Group [%s] was not found, nothing exported for it.", group_id)
+        return result
+
+    for pkg_rev in group.packages(with_private=with_private, context={'user_is_admin': True}):
         result.append(model_dictize.package_dictize(pkg_rev, {'model': model}))
 
     return result
